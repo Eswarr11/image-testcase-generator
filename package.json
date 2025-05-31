@@ -1,12 +1,41 @@
 {
-  "name": "testcase-using-image",
+  "name": "jira-test-case-generator",
   "version": "1.0.0",
   "description": "A Chrome extension that uses OpenAI's GPT-4o capabilities to generate Jira test cases from prompts and optional images.",
-  "main": "background.js",
+  "main": "popup.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "mkdir -p dist && cp -r manifest.json popup.html popup.js background.js images README.md dist/",
+    "package": "npm run build && cd dist && zip -r ../jira-test-case-generator.zip * && cd ..",
+    "package-simple": "zip -r jira-test-case-generator.zip . -x '*.git*' 'node_modules/*' '*.zip' 'package-lock.json' 'dist/*'",
+    "clean": "rm -rf dist *.zip",
+    "dev": "echo 'Load the extension in Chrome by going to chrome://extensions/ and clicking Load unpacked, then select this directory.'",
+    "lint": "echo 'Linting not configured yet'",
+    "test": "echo 'No tests specified'"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  "keywords": [
+    "chrome-extension",
+    "jira",
+    "test-cases",
+    "openai",
+    "gpt-4o",
+    "qa",
+    "testing",
+    "automation",
+    "ai-powered",
+    "image-analysis",
+    "quality-assurance"
+  ],
+  "author": "Eswar A",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Eswarr11/image-testcase-generator"
+  },
+  "bugs": {
+    "url": "https://github.com/Eswarr11/image-testcase-generator/issues"
+  },
+  "homepage": "https://github.com/Eswarr11/image-testcase-generator#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  }
 }

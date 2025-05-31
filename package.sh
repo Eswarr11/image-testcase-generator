@@ -1,15 +1,19 @@
 #!/bin/bash
 
-# Create a clean distribution directory
-rm -rf dist
-mkdir -p dist
+# Jira Test Case Generator - Build Script
+# This script builds and packages the Chrome extension
 
-# Copy all necessary files
-cp -r manifest.json popup.html popup.js background.js images README.md dist/
+echo "Building Jira Test Case Generator Chrome Extension..."
 
-# Create a zip file for Chrome Web Store submission
-cd dist
-zip -r ../jira-test-case-generator.zip *
-cd ..
+# Clean previous builds
+npm run clean
 
-echo "Extension packaged successfully in jira-test-case-generator.zip" 
+# Build the extension
+npm run build
+
+# Package for Chrome Web Store
+npm run package
+
+echo "✅ Extension packaged successfully!"
+echo "📦 File: jira-test-case-generator.zip"
+echo "🚀 Ready for Chrome Web Store upload" 
