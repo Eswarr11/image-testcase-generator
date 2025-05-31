@@ -8,9 +8,5 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "@playwright/test": "^1.52.0",
-    "resemblejs": "^5.0.0"
-  }
+  "license": "ISC"
 }
