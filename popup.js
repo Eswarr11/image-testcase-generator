@@ -1,6 +1,6 @@
 // Global variables
-let selectedImages = [];
-const MAX_IMAGES = 5;
+let selectedFiles = [];
+const MAX_FILES = 9;
 let lastActiveTabId = null; // Track the last active tab
 
 // Listen for tab activation events and store the last active tab
@@ -142,14 +142,14 @@ document.addEventListener('DOMContentLoaded', function() {
           isScreenshot: true
         };
         
-        // Add screenshot to selected images and update UI
-        if (selectedImages.length < MAX_IMAGES) {
-          selectedImages.push(imageData);
-          renderImagePreviews();
-          updateImageCounter();
+        // Add screenshot to selected files and update UI
+        if (selectedFiles.length < MAX_FILES) {
+          selectedFiles.push(imageData);
+          renderFilePreviews();
+          updateFileCounter();
           showToast('Screenshot captured!');
         } else {
-          showToast('Maximum image limit reached (5 images)', 'error');
+          showToast(`Maximum file limit reached (${MAX_FILES} files)`, 'error');
         }
       } catch (error) {
         console.error('Error capturing screenshot:', error);
@@ -194,8 +194,8 @@ document.addEventListener('DOMContentLoaded', function() {
         clearImagesButton.style.transform = 'translateX(0)';
       }, 300);
       
-      // Fade out images before removing them
-      const previews = imagePreviewDiv.querySelectorAll('.image-preview-item');
+              // Fade out files before removing them
+        const previews = imagePreviewDiv.querySelectorAll('.file-preview-item');
       if (previews.length > 0) {
         previews.forEach(preview => {
           preview.style.opacity = '0';
@@ -203,15 +203,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         setTimeout(() => {
-          selectedImages = [];
-          renderImagePreviews();
-          updateImageCounter();
+          selectedFiles = [];
+          renderFilePreviews();
+          updateFileCounter();
           clearImagesButton.style.display = 'none';
         }, 300);
       } else {
-        selectedImages = [];
-        renderImagePreviews();
-        updateImageCounter();
+        selectedFiles = [];
+        renderFilePreviews();
+        updateFileCounter();
         clearImagesButton.style.display = 'none';
       }
     });
@@ -251,11 +251,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Update image counter with animation
-  function updateImageCounter() {
-    if (selectedImages.length > 0) {
+  // Update file counter with animation
+  function updateFileCounter() {
+    if (selectedFiles.length > 0) {
       imageCounter.style.display = 'flex';
-      imageCount.textContent = selectedImages.length;
+      imageCount.textContent = selectedFiles.length;
       clearImagesButton.style.display = 'inline-block';
       
       // Animate counter
@@ -305,31 +305,52 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function handleFiles(files) {
-    if (selectedImages.length + files.length > MAX_IMAGES) {
+    if (selectedFiles.length + files.length > MAX_FILES) {
       // Show elegant error feedback
       dropArea.classList.add('shake');
       setTimeout(() => {
         dropArea.classList.remove('shake');
       }, 600);
       
-      showToast(`You can only upload up to ${MAX_IMAGES} images in total`, 'error');
+      showToast(`You can only upload up to ${MAX_FILES} files in total`, 'error');
       return;
     }
 
     [...files].forEach(file => {
-      if (!file.type.startsWith('image/')) return;
+      // Accept images, PDFs, and videos
+      const allowedTypes = [
+        'image/', 
+        'application/pdf', 
+        'video/mp4', 
+        'video/mov', 
+        'video/avi', 
+        'video/webm', 
+        'video/quicktime'
+      ];
+      
+      const isAllowed = allowedTypes.some(type => file.type.startsWith(type) || file.type === type);
+      
+      if (!isAllowed) {
+        showToast(`Unsupported file type: ${file.type}. Only images, PDFs, and videos are allowed.`, 'error');
+        return;
+      }
       
       const reader = new FileReader();
       reader.onload = function(e) {
-        const imageData = {
+        const fileData = {
           name: file.name,
           data: e.target.result,
-          file: file
+          file: file,
+          type: file.type,
+          size: file.size,
+          isImage: file.type.startsWith('image/'),
+          isPdf: file.type === 'application/pdf',
+          isVideo: file.type.startsWith('video/')
         };
         
-        selectedImages.push(imageData);
-        renderImagePreviews();
-        updateImageCounter();
+        selectedFiles.push(fileData);
+        renderFilePreviews();
+        updateFileCounter();
       };
       reader.readAsDataURL(file);
     });
@@ -386,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
 
-    generateTestCase(apiKey, prompt, selectedImages);
+    generateTestCase(apiKey, prompt, selectedFiles);
   });
 
   // Image Modal functionality
@@ -428,37 +449,62 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // Render image previews with staggered animation
-  function renderImagePreviews() {
+  // Render file previews with staggered animation
+  function renderFilePreviews() {
     imagePreviewDiv.innerHTML = '';
     
-    selectedImages.forEach((img, index) => {
+    selectedFiles.forEach((file, index) => {
       const previewItem = document.createElement('div');
-      previewItem.className = 'image-preview-item';
+      previewItem.className = 'file-preview-item';
       previewItem.style.opacity = '0';
       previewItem.style.transform = 'scale(0.9)';
       
-      const imgElement = document.createElement('img');
-      imgElement.src = img.data;
+      // Create different previews based on file type
+      if (file.isImage) {
+        const imgElement = document.createElement('img');
+        imgElement.src = file.data;
+        imgElement.style.width = '100%';
+        imgElement.style.height = '100%';
+        imgElement.style.objectFit = 'cover';
+        previewItem.appendChild(imgElement);
+      } else if (file.isPdf) {
+        const pdfIcon = document.createElement('div');
+        pdfIcon.className = 'file-icon pdf-icon';
+        pdfIcon.innerHTML = `
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="#e74c3c">
+            <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+          </svg>
+          <span>PDF</span>
+        `;
+        previewItem.appendChild(pdfIcon);
+      } else if (file.isVideo) {
+        const videoIcon = document.createElement('div');
+        videoIcon.className = 'file-icon video-icon';
+        videoIcon.innerHTML = `
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="#9b59b6">
+            <path d="M17,10.5V7A1,1 0 0,0 16,6H4A1,1 0 0,0 3,7V17A1,1 0 0,0 4,18H16A1,1 0 0,0 17,17V13.5L21,17.5V6.5L17,10.5Z"/>
+          </svg>
+          <span>VIDEO</span>
+        `;
+        previewItem.appendChild(videoIcon);
+      }
+      
+      // Add file name overlay
+      const nameOverlay = document.createElement('div');
+      nameOverlay.className = 'file-name-overlay';
+      nameOverlay.textContent = file.name.length > 15 ? file.name.substring(0, 12) + '...' : file.name;
+      previewItem.appendChild(nameOverlay);
       
       // Add caption for screenshots
-      if (img.isScreenshot) {
+      if (file.isScreenshot) {
         const badgeElement = document.createElement('div');
-        badgeElement.style.position = 'absolute';
-        badgeElement.style.bottom = '4px';
-        badgeElement.style.left = '4px';
-        badgeElement.style.backgroundColor = 'rgba(159, 122, 234, 0.6)';
-        badgeElement.style.color = 'white';
-        badgeElement.style.fontSize = '10px';
-        badgeElement.style.padding = '2px 5px';
-        badgeElement.style.borderRadius = '4px';
-        badgeElement.style.backdropFilter = 'blur(4px)';
+        badgeElement.className = 'screenshot-badge';
         badgeElement.textContent = 'Screenshot';
         previewItem.appendChild(badgeElement);
       }
       
       const removeButton = document.createElement('div');
-      removeButton.className = 'remove-image';
+      removeButton.className = 'remove-file';
       removeButton.innerHTML = '×';
       removeButton.onclick = function(e) {
         e.stopPropagation(); // Prevent event bubbling
@@ -468,18 +514,20 @@ document.addEventListener('DOMContentLoaded', function() {
         previewItem.style.transform = 'scale(0.8)';
         
         setTimeout(() => {
-          selectedImages.splice(index, 1);
-          renderImagePreviews();
-          updateImageCounter();
+          selectedFiles.splice(index, 1);
+          renderFilePreviews();
+          updateFileCounter();
         }, 300);
       };
       
-      // Add click event to preview image in modal
-      previewItem.addEventListener('click', function() {
-        openImageModal(img.data, img.name);
-      });
+      // Add click event to preview file in modal (only for images)
+      if (file.isImage) {
+        previewItem.addEventListener('click', function() {
+          openImageModal(file.data, file.name);
+        });
+        previewItem.style.cursor = 'pointer';
+      }
       
-      previewItem.appendChild(imgElement);
       previewItem.appendChild(removeButton);
       imagePreviewDiv.appendChild(previewItem);
       
@@ -498,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // Generate test case function with improved animations
-  async function generateTestCase(apiKey, prompt, images) {
+  async function generateTestCase(apiKey, prompt, files) {
     generateButton.disabled = true;
     loadingSpinner.style.display = 'inline-block';
     generateButton.classList.add('generating');
@@ -506,9 +554,25 @@ document.addEventListener('DOMContentLoaded', function() {
     copyButton.style.display = 'none';
     
     try {
+      // Separate files by type
+      const imageFiles = files.filter(file => file.isImage);
+      const pdfFiles = files.filter(file => file.isPdf);
+      const videoFiles = files.filter(file => file.isVideo);
+      
+      // Build file context description
+      let fileContext = '';
+      if (pdfFiles.length > 0) {
+        fileContext += `\n\nPDF Documents attached (${pdfFiles.length}): ${pdfFiles.map(f => f.name).join(', ')}`;
+      }
+      if (videoFiles.length > 0) {
+        fileContext += `\n\nVideo Files attached (${videoFiles.length}): ${videoFiles.map(f => f.name).join(', ')}`;
+      }
+      
       // Create the request to OpenAI API
       const requestData = {
-        model: "gpt-4o", // Using gpt-4o which has built-in vision capabilities
+        model: "gpt-4o",
+        temperature: 0.2, // low temp for consistency
+        max_tokens: 2000,
         messages: [
           {
             role: "user",
@@ -516,58 +580,80 @@ document.addEventListener('DOMContentLoaded', function() {
               {
                 type: "text",
                 text: `
-Act as a Lead QA Manual and Automation Manager, Senior Product Manager, and Senior Product Developer with expertise in writing comprehensive and detailed test cases. Analyze the provided images thoroughly, carefully observing the UI layout, features, workflows, and potential risk areas. Based on ${images.length > 0 ? 'the provided images and ' : ''}the following prompt: "${prompt}", create a complete and exhaustive list of test cases, including at least one positive and one negative scenario. You must generate all possible valid and invalid test cases without any limitation on the number — covering every interaction, functionality, UI element, permission level, edge case, and potential failure point that can be tested. Every test case must be clear, precise, runnable, and directly executable by a QA engineer. Reference specific UI elements visible in the images where applicable. Follow strict formatting guidelines: number each test case clearly as "Test Case 1", "Test Case 2", and so on; use only basic characters such as letters, numbers, hyphens, commas, periods, and quotes; avoid using special characters like asterisks or curly braces; and maintain a clean, simple structure for easy copying into Jira.
+Act as a Lead QA Manual and Automation Manager, Senior Product Manager, and Senior Product Developer. Your objective is to write a **complete, exhaustive, and production-grade suite of test cases** based on the input materials provided.
 
-For each test case, adhere to the following structure:
+You are expected to analyze the provided files thoroughly — including images, PDFs, and video files — by carefully observing UI layout, workflows, features, permission controls, and risk areas.
 
-Test Case #: [Number - indicate if Positive or Negative]
+Based on ${files.length > 0 ? 'the provided files and ' : ''}the following prompt: "${prompt}", generate test cases that comprehensively cover:
 
-Title: [A clear, concise title summarizing the test case]
+- All positive and negative user scenarios
+- All possible valid and invalid inputs
+- UI functionality, form validations, data boundaries, permission-level access
+- Non-functional considerations (e.g., performance, error messages)
+- Edge cases and exception handling
+- Role-based behavior variations (admin, editor, viewer, etc.)
+- System response and behavior across devices or states
 
-Input:
-- Description: [Detailed explanation of the feature being tested]
-- Context: [Broader context of why this test is important]
-${images.length > 0 ? '- UI Information: [Insights from the provided screenshots/images]' : ''}
+Each test case should follow the format below and be easily copy-pasteable into Jira:
 
-Pre-conditions:
-1. [Pre-condition 1]
-2. [Pre-condition 2]
+---
+
+**Test Case #:** [Number – indicate Positive or Negative]  
+**Title:** [Short, descriptive title]
+
+**Input:**  
+- Description: [What is being tested]  
+- Context: [Why this test matters from a business or technical perspective]  
+${imageFiles.length > 0 ? '- UI Information: [Details from screenshots/images]' : ''}
+${pdfFiles.length > 0 ? '- PDF Documents: [Relevant notes from PDF files]' : ''}
+${videoFiles.length > 0 ? '- Video Files: [Key flows observed from video]' : ''}
+
+**Pre-conditions:**  
+1. [Pre-condition 1, e.g., user role or system state]  
+2. [Pre-condition 2, e.g., required test data]  
 ...
 
-Steps:
-1. [Detailed action step 1]
-2. [Detailed action step 2]
-...
+**Steps:**  
+1. Log in as [specific role] using valid credentials  
+2. Navigate to [specific feature/module] from homepage/dashboard  
+3. Perform the following actions: [clear user interactions]  
+...  
+n. Submit or complete the action
 
-Expectation:
-- Expected Results: [What should happen after executing all steps]
-- Validation Points: [Specific points to verify in the UI or system]
-- Error Handling: [How edge cases should be handled]
+**Expectation:**  
+- Expected Results: [What should happen after performing all steps]  
+- Validation Points: [What to check on UI/backend/API/logs]  
+- Error Handling: [How the system should respond in edge/failure cases]
 
-Additional Information:
-- Regression Candidate: [Yes/No] — Explain why or why not
-- Priority: [Critical/High/Medium/Low] — Justify this priority level
+**Additional Information:**  
+- Regression Candidate: [Yes/No – justify why this test should or shouldn't be part of the regression suite]  
+- Priority: [Critical/High/Medium/Low – based on business/user risk]
 
-${images.length > 0 
-  ? 'Make sure to analyze the provided images deeply. Review the UI layout, workflows, interactive elements, permissions, error states, and all edge cases from the perspective of a Lead QA Manager, Senior Product Manager, and Senior Product Developer. Cover every functional, non-functional, and negative test case scenario, ensuring a complete QA and product validation checklist that leaves no element or user flow untested.' 
-  : 'Create a full list of test cases based solely on the given context, ensuring you test all possible positive and negative scenarios, edge cases, and error conditions without limiting the number of cases. Cover functional, non-functional, and boundary validations comprehensively.'
-}
+---
 
-IMPORTANT: Always start test steps from the very beginning of the user journey. Include login steps, navigation to the specific feature/page, and any prerequisite actions needed before reaching the main functionality being tested. Do not assume the user is already at a specific section of the application. This ensures test cases are complete and can be executed by any QA engineer without prior knowledge of the application state.
+${files.length > 0
+  ? 'Use the attached files to extract real UI workflows, actions, and validations. Reference specific button names, input labels, dropdowns, modals, error banners, and system flows observed.'
+  : 'Use only the provided prompt to infer workflows and generate maximum test coverage across UI, backend, and business logic.'}
 
-Remember to be extremely specific, detail-oriented, and focus on creating testable actions and verifiable outcomes that can directly be executed by QA engineers.
+🚨 **IMPORTANT:**  
+- Always begin from the start of the user journey: login → navigation → interaction → validation.  
+- Do not assume the user is already at the feature page.  
+- Every test case should be complete, independent, and executable by any QA engineer without needing prior state knowledge.  
+- Use clean structure and Jira-safe characters: letters, numbers, hyphens, commas, and periods only (no emojis, asterisks, or markdown).  
+- Be extremely specific, QA-minded, and leave no area untested.
+
+Your output should represent a **full validation checklist** from a product, engineering, and QA perspective. Think like a Release Manager signing off a feature for production.
                 `
               }
             ]
           }
-        ],
-        max_tokens: 2000
+        ]
       };
       
-      // Add images to the request if any are provided
-      if (images.length > 0) {
+      // Add images to the request if any are provided (only actual images, not PDFs or videos)
+      if (imageFiles.length > 0) {
         // First, encode all images to base64
-        const imagePromises = images.map(async (img) => {
+        const imagePromises = imageFiles.map(async (img) => {
           return {
             name: img.name,
             data: img.data.split(',')[1] // Remove data URL prefix

@@ -29,7 +29,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Eswarr11/image-testcase-generator"
+    "url": "https://github.com/Eswarr11/image-testcase-generator.git"
   },
   "bugs": {
     "url": "https://github.com/Eswarr11/image-testcase-generator/issues"
@@ -37,5 +37,8 @@
   "homepage": "https://github.com/Eswarr11/image-testcase-generator#readme",
   "engines": {
     "node": ">=14.0.0"
+  },
+  "dependencies": {
+    "@vitalets/google-translate-api": "^9.2.1"
   }
 }

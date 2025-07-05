@@ -216,26 +216,29 @@
       color: var(--text);
       padding: 22px;
       border-radius: var(--border-radius);
-      border: 1px solid var(--border);
+      border: 2px dashed rgba(159, 122, 234, 0.3);
       cursor: pointer;
       transition: var(--transition);
       font-size: 15px;
       text-align: center;
-      height: 130px;
+      height: 150px;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     }
 
     .file-btn.drag-over {
-      border-color: var(--primary);
-      background-color: rgba(159, 122, 234, 0.1);
-      transform: scale(1.01);
+      border-color: var(--primary-light);
+      background-color: rgba(159, 122, 234, 0.2);
+      transform: scale(1.02);
+      box-shadow: 0 12px 30px rgba(159, 122, 234, 0.3);
     }
 
     .file-btn:hover {
-      border-color: var(--primary-light);
-      background-color: rgba(159, 122, 234, 0.08);
-      transform: translateY(-2px);
+      border-color: var(--primary);
+      background-color: rgba(159, 122, 234, 0.15);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(159, 122, 234, 0.2);
     }
 
     .file-btn .icon {
@@ -333,7 +336,7 @@
       box-shadow: 0 4px 8px rgba(159, 122, 234, 0.4);
     }
 
-    .image-preview-item {
+    .file-preview-item {
       position: relative;
       width: 100%;
       aspect-ratio: 1/1;
@@ -341,26 +344,90 @@
       overflow: hidden;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
       transition: var(--transition);
-      cursor: pointer;
+      background: rgba(45, 55, 72, 0.3);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
 
-    .image-preview-item:hover {
+    .file-preview-item:hover {
       transform: translateY(-3px);
       box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
     }
 
-    .image-preview-item img {
+    .file-preview-item img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       transition: var(--transition);
     }
 
-    .image-preview-item:hover img {
+    .file-preview-item:hover img {
       transform: scale(1.05);
     }
 
-    .remove-image {
+    .file-icon {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .file-icon svg {
+      width: 32px;
+      height: 32px;
+      opacity: 0.8;
+    }
+
+    .file-icon span {
+      font-size: 8px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pdf-icon svg {
+      fill: #e74c3c;
+    }
+
+    .video-icon svg {
+      fill: #9b59b6;
+    }
+
+    .file-name-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+      color: white;
+      font-size: 8px;
+      padding: 8px 4px 4px;
+      text-align: center;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .screenshot-badge {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      background: rgba(159, 122, 234, 0.9);
+      color: white;
+      font-size: 8px;
+      padding: 2px 5px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      font-weight: 500;
+    }
+
+    .remove-file {
       position: absolute;
       top: 6px;
       right: 6px;
@@ -383,12 +450,12 @@
       z-index: 2;
     }
 
-    .image-preview-item:hover .remove-image {
+    .file-preview-item:hover .remove-file {
       opacity: 1;
       transform: scale(1);
     }
 
-    .remove-image:hover {
+    .remove-file:hover {
       background-color: var(--primary);
       transform: scale(1.1);
     }
@@ -795,7 +862,7 @@
             <path d="M8 12H16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h1>Test Case Generator</h1>
+        <h1>AI Test Case Generator</h1>
       </div>
       <button id="closeButton" class="close-button">✕</button>
     </div>
@@ -815,17 +882,16 @@
       </div>
       
       <div class="form-group">
-        <label for="imageUpload">Upload Images <span class="optional">(optional, max 5)</span></label>
+        <label for="imageUpload">Upload Files <span class="optional">(optional, max 9 - images, PDFs, videos)</span></label>
         <div class="file-input-container">
           <div id="dropArea" class="file-btn">
             <div class="icon-camera">
               <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 15.2C13.7673 15.2 15.2 13.7673 15.2 12C15.2 10.2327 13.7673 8.8 12 8.8C10.2327 8.8 8.8 10.2327 8.8 12C8.8 13.7673 10.2327 15.2 12 15.2Z"/>
-                <path d="M9 2L7.17 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4H16.83L15 2H9ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17Z"/>
+                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
               </svg>
             </div>
-            <span class="text">Drag & Drop Images</span>
-            <span class="subtext">or click to browse</span>
+            <span class="text">Drag & Drop Files</span>
+            <span class="subtext">Images, PDFs, Videos</span>
             <div id="imageCounter" class="image-counter">
               <span id="imageCount">0</span>
             </div>
@@ -838,9 +904,9 @@
               Take Screenshot
             </button>
           </div>
-          <input type="file" id="imageUpload" accept="image/*" multiple style="display: none;">
+          <input type="file" id="imageUpload" accept="image/*,application/pdf,video/*" multiple style="display: none;">
           <div id="imagePreview"></div>
-          <a id="clearImages" class="clear-images" style="display: none;">Clear all images</a>
+          <a id="clearImages" class="clear-images" style="display: none;">Clear all files</a>
         </div>
       </div>
       
