@@ -28,6 +28,9 @@
   "host_permissions": [
     "https://api.openai.com/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://cdnjs.cloudflare.com; object-src 'self'; worker-src 'self' https://cdnjs.cloudflare.com blob:;"
+  },
   "web_accessible_resources": [
     {
       "resources": ["popup.html"],
