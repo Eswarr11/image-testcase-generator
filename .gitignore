@@ -49,4 +49,8 @@ web-store-upload.zip
 
 # Package manager locks when no dependencies
 package-lock.json
-yarn.lock 
+yarn.lock
+
+# Translation outputs
+*_translated_*.json
+translated_* 

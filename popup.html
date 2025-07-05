@@ -27,7 +27,7 @@
       padding: 0;
     }
 
-    body {
+    html, body {
       font-family: 'Outfit', sans-serif;
       padding: 0;
       margin: 0;
@@ -37,13 +37,247 @@
       overflow-x: hidden;
       letter-spacing: 0.01em;
       background-image: linear-gradient(135deg, rgba(79, 84, 103, 0.8) 0%, rgba(26, 32, 44, 0.8) 100%);
-      min-height: 100vh;
+      min-width: 600px;
+      min-height: 700px;
+      width: 600px;
+      height: 700px;
+    }
+
+    /* Fullscreen mode adjustments */
+    .fullscreen-mode {
+      width: 100vw !important;
+      min-height: 100vh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    .fullscreen-mode .app-container {
+      max-width: 100% !important;
+      width: 100vw !important;
+      margin: 0 !important;
+      min-height: 100vh !important;
+      height: auto !important;
+      border-radius: 0 !important;
+      position: relative !important;
+      overflow: visible !important;
+    }
+
+    .fullscreen-mode .content {
+      padding: 60px 80px !important;
+      max-width: none !important;
+      width: 100% !important;
+      margin: 0 !important;
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 60px !important;
+      align-items: start !important;
+      min-height: calc(100vh - 80px) !important;
+      overflow: visible !important;
+      box-sizing: border-box !important;
+    }
+
+    .fullscreen-mode .form-section {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 32px !important;
+      background: rgba(45, 55, 72, 0.3) !important;
+      border-radius: 16px !important;
+      padding: 40px !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      height: fit-content !important;
+      align-self: start !important;
+    }
+
+    .fullscreen-mode .output-section {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 24px !important;
+      background: rgba(45, 55, 72, 0.3) !important;
+      border-radius: 16px !important;
+      padding: 40px !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      min-height: calc(100vh - 200px) !important;
+      align-self: start !important;
+    }
+
+    .fullscreen-mode textarea {
+      height: 180px !important;
+      font-size: 16px !important;
+    }
+
+    .fullscreen-mode .file-btn {
+      height: 180px !important;
+      padding: 30px !important;
+      background: rgba(159, 122, 234, 0.1) !important;
+      border: 2px dashed rgba(159, 122, 234, 0.4) !important;
+      margin: 0 !important;
+    }
+
+    .fullscreen-mode .file-btn .icon-camera {
+      width: 50px !important;
+      height: 50px !important;
+      margin-bottom: 16px !important;
+      background: rgba(159, 122, 234, 0.2) !important;
+    }
+
+    .fullscreen-mode .file-btn .text {
+      font-size: 16px !important;
+      font-weight: 600 !important;
+    }
+
+    .fullscreen-mode .file-btn .subtext {
+      font-size: 14px !important;
+      margin-top: 6px !important;
+    }
+
+    .fullscreen-mode #imagePreview {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+      gap: 16px !important;
+    }
+
+    .fullscreen-mode #result {
+      font-size: 15px !important;
+      line-height: 1.7 !important;
+      padding: 20px !important;
+      margin: 0 !important;
+      background: rgba(45, 55, 72, 0.2) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 12px !important;
+      overflow-y: auto !important;
+      max-height: 600px !important;
+      min-height: 300px !important;
+    }
+
+    .fullscreen-mode .form-group {
+      margin-bottom: 0 !important;
+    }
+    
+    .fullscreen-mode .form-group:last-child {
+      margin-bottom: 0 !important;
+    }
+
+    .fullscreen-mode label {
+      font-size: 16px !important;
+      margin-bottom: 12px !important;
+    }
+
+    .fullscreen-mode button {
+      padding: 16px 24px !important;
+      font-size: 16px !important;
+      font-weight: 600 !important;
+    }
+
+    .fullscreen-mode .header {
+      padding: 20px 80px !important;
+      background: rgba(26, 32, 44, 0.9) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      position: relative !important;
+      z-index: 100 !important;
+    }
+
+    .fullscreen-mode h1 {
+      font-size: 24px !important;
+    }
+
+    .fullscreen-mode .output-header h3 {
+      font-size: 20px !important;
+      color: var(--text) !important;
+    }
+
+    .fullscreen-mode .api-key-container {
+      flex-direction: row !important;
+      gap: 12px !important;
+      align-items: flex-end !important;
+    }
+
+    .fullscreen-mode .api-key-container input {
+      flex: 1 !important;
+    }
+
+    .fullscreen-mode .api-key-container button {
+      align-self: stretch !important;
+      width: auto !important;
+      min-width: 120px !important;
+      margin: 0 !important;
+    }
+
+    /* Hide certain elements in fullscreen to save space */
+    .fullscreen-mode .app-container {
+      box-shadow: none !important;
+    }
+
+    /* Responsive adjustments for smaller screens in fullscreen */
+    @media (max-width: 1400px) {
+      .fullscreen-mode .content {
+        grid-template-columns: 1fr !important;
+        gap: 40px !important;
+        padding: 40px 60px 60px 60px !important;
+        min-height: auto !important;
+      }
+      
+      .fullscreen-mode .header {
+        padding: 20px 60px !important;
+      }
+      
+      .fullscreen-mode .form-section,
+      .fullscreen-mode .output-section {
+        padding: 30px !important;
+      }
+      
+      .fullscreen-mode .output-section {
+        min-height: auto !important;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .fullscreen-mode .content {
+        padding: 30px 40px !important;
+        gap: 30px !important;
+      }
+      
+      .fullscreen-mode .header {
+        padding: 20px 40px !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .fullscreen-mode .content {
+        padding: 20px 30px !important;
+        gap: 20px !important;
+      }
+      
+      .fullscreen-mode .header {
+        padding: 16px 30px !important;
+      }
+      
+      .fullscreen-mode textarea {
+        height: 140px !important;
+      }
+      
+      .fullscreen-mode .file-btn {
+        height: 140px !important;
+        padding: 20px !important;
+      }
+      
+      .fullscreen-mode .form-section,
+      .fullscreen-mode .output-section {
+        padding: 20px !important;
+      }
     }
 
     .app-container {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      min-height: 100%;
+      height: 100%;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       max-width: 100%;
@@ -89,7 +323,13 @@
       letter-spacing: 0.01em;
     }
 
-    .close-button {
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fullscreen-button, .close-button {
       background: rgba(255, 255, 255, 0.08);
       border: none;
       cursor: pointer;
@@ -106,15 +346,19 @@
       -webkit-backdrop-filter: blur(10px);
     }
 
-    .close-button:hover {
+    .fullscreen-button:hover, .close-button:hover {
       background: rgba(255, 255, 255, 0.15);
       transform: translateY(-2px);
     }
 
+    .fullscreen-button:hover {
+      background: rgba(159, 122, 234, 0.3);
+    }
+
     .content {
       flex: 1;
-      padding: 24px;
-      max-width: 800px;
+      padding: 32px;
+      max-width: 100%;
       width: 100%;
       margin: 0 auto;
     }
@@ -158,7 +402,7 @@
     }
 
     textarea {
-      height: 100px;
+      height: 120px;
     }
 
     textarea:focus, input[type="password"]:focus, input[type="text"]:focus {
@@ -216,26 +460,29 @@
       color: var(--text);
       padding: 22px;
       border-radius: var(--border-radius);
-      border: 1px solid var(--border);
+      border: 2px dashed rgba(159, 122, 234, 0.3);
       cursor: pointer;
       transition: var(--transition);
       font-size: 15px;
       text-align: center;
-      height: 130px;
+      height: 150px;
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     }
 
     .file-btn.drag-over {
-      border-color: var(--primary);
-      background-color: rgba(159, 122, 234, 0.1);
-      transform: scale(1.01);
+      border-color: var(--primary-light);
+      background-color: rgba(159, 122, 234, 0.2);
+      transform: scale(1.02);
+      box-shadow: 0 12px 30px rgba(159, 122, 234, 0.3);
     }
 
     .file-btn:hover {
-      border-color: var(--primary-light);
-      background-color: rgba(159, 122, 234, 0.08);
-      transform: translateY(-2px);
+      border-color: var(--primary);
+      background-color: rgba(159, 122, 234, 0.15);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(159, 122, 234, 0.2);
     }
 
     .file-btn .icon {
@@ -333,7 +580,7 @@
       box-shadow: 0 4px 8px rgba(159, 122, 234, 0.4);
     }
 
-    .image-preview-item {
+    .file-preview-item {
       position: relative;
       width: 100%;
       aspect-ratio: 1/1;
@@ -341,26 +588,90 @@
       overflow: hidden;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
       transition: var(--transition);
-      cursor: pointer;
+      background: rgba(45, 55, 72, 0.3);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
 
-    .image-preview-item:hover {
+    .file-preview-item:hover {
       transform: translateY(-3px);
       box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
     }
 
-    .image-preview-item img {
+    .file-preview-item img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       transition: var(--transition);
     }
 
-    .image-preview-item:hover img {
+    .file-preview-item:hover img {
       transform: scale(1.05);
     }
 
-    .remove-image {
+    .file-icon {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .file-icon svg {
+      width: 32px;
+      height: 32px;
+      opacity: 0.8;
+    }
+
+    .file-icon span {
+      font-size: 8px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .pdf-icon svg {
+      fill: #e74c3c;
+    }
+
+    .video-icon svg {
+      fill: #9b59b6;
+    }
+
+    .file-name-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+      color: white;
+      font-size: 8px;
+      padding: 8px 4px 4px;
+      text-align: center;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .screenshot-badge {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      background: rgba(159, 122, 234, 0.9);
+      color: white;
+      font-size: 8px;
+      padding: 2px 5px;
+      border-radius: 4px;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      font-weight: 500;
+    }
+
+    .remove-file {
       position: absolute;
       top: 6px;
       right: 6px;
@@ -383,12 +694,12 @@
       z-index: 2;
     }
 
-    .image-preview-item:hover .remove-image {
+    .file-preview-item:hover .remove-file {
       opacity: 1;
       transform: scale(1);
     }
 
-    .remove-image:hover {
+    .remove-file:hover {
       background-color: var(--primary);
       transform: scale(1.1);
     }
@@ -487,9 +798,54 @@
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
     }
 
+    .output-section {
+      display: none;
+    }
+
+    .output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .output-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
     .result-actions {
       display: flex;
       justify-content: flex-end;
+      margin: 0;
+    }
+
+    /* Show output section when result is displayed */
+    .fullscreen-mode .output-section {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    /* In popup mode, keep original layout */
+    .popup-mode .output-section {
+      display: block;
+      margin-top: 24px;
+    }
+
+    .popup-mode .form-section,
+    .popup-mode .output-section {
+      display: block;
+    }
+
+    .popup-mode .output-header {
+      display: none;
+    }
+
+    .popup-mode .result-actions {
       margin-top: 10px;
     }
 
@@ -726,6 +1082,7 @@
 
     /* Media queries for responsive design */
     @media (min-width: 768px) {
+      /* When opened in full-screen mode (tab) */
       .app-container {
         max-width: 90%;
         width: 100%;
@@ -733,6 +1090,14 @@
         margin: 20px auto;
         min-height: calc(100vh - 40px);
         box-shadow: var(--shadow);
+      }
+      
+      .content {
+        padding: 40px;
+      }
+      
+      textarea {
+        height: 150px;
       }
       
       #imagePreview {
@@ -743,6 +1108,14 @@
     @media (min-width: 1200px) {
       .app-container {
         max-width: 1000px;
+      }
+      
+      .content {
+        padding: 50px;
+      }
+      
+      textarea {
+        height: 180px;
       }
       
       #imagePreview {
@@ -795,63 +1168,76 @@
             <path d="M8 12H16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h1>Test Case Generator</h1>
+        <h1>AI Test Case Generator</h1>
       </div>
-      <button id="closeButton" class="close-button">✕</button>
+      <div class="header-actions">
+        <button id="fullscreenButton" class="fullscreen-button" title="Open in full screen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3H5C3.9 3 3 3.9 3 5V8M21 8V5C21 3.9 20.1 3 19 3H16M16 21H19C20.1 21 21 20.1 21 19V16M8 21H5C3.9 21 3 20.1 3 19V16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button id="closeButton" class="close-button">✕</button>
+      </div>
     </div>
     
     <div class="content">
-      <div class="form-group">
-        <label for="apiKey">OpenAI API Key</label>
-        <div class="api-key-container">
-          <input type="password" id="apiKey" placeholder="Enter your OpenAI API key">
-          <button id="saveApiKey" class="save-btn">Save</button>
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="prompt">Test Case Prompt</label>
-        <textarea id="prompt" placeholder="Describe the feature or functionality you want to create test cases for..."></textarea>
-      </div>
-      
-      <div class="form-group">
-        <label for="imageUpload">Upload Images <span class="optional">(optional, max 5)</span></label>
-        <div class="file-input-container">
-          <div id="dropArea" class="file-btn">
-            <div class="icon-camera">
-              <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 15.2C13.7673 15.2 15.2 13.7673 15.2 12C15.2 10.2327 13.7673 8.8 12 8.8C10.2327 8.8 8.8 10.2327 8.8 12C8.8 13.7673 10.2327 15.2 12 15.2Z"/>
-                <path d="M9 2L7.17 4H4C2.9 4 2 4.9 2 6V18C2 19.1 2.9 20 4 20H20C21.1 20 22 19.1 22 18V6C22 4.9 21.1 4 20 4H16.83L15 2H9ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17Z"/>
-              </svg>
-            </div>
-            <span class="text">Drag & Drop Images</span>
-            <span class="subtext">or click to browse</span>
-            <div id="imageCounter" class="image-counter">
-              <span id="imageCount">0</span>
-            </div>
+      <div class="form-section">
+        <div class="form-group">
+          <label for="apiKey">OpenAI API Key</label>
+          <div class="api-key-container">
+            <input type="password" id="apiKey" placeholder="Enter your OpenAI API key">
+            <button id="saveApiKey" class="save-btn">Save</button>
           </div>
-          <div class="upload-actions">
-            <button id="takeScreenshot" class="screenshot-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
-              </svg>
-              Take Screenshot
-            </button>
-          </div>
-          <input type="file" id="imageUpload" accept="image/*" multiple style="display: none;">
-          <div id="imagePreview"></div>
-          <a id="clearImages" class="clear-images" style="display: none;">Clear all images</a>
         </div>
+        
+        <div class="form-group">
+          <label for="prompt">Test Case Prompt</label>
+          <textarea id="prompt" placeholder="Describe the feature or functionality you want to create test cases for..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="imageUpload">Upload Files <span class="optional">(optional, max 9 - images, PDFs, videos)</span></label>
+          <div class="file-input-container">
+            <div id="dropArea" class="file-btn">
+              <div class="icon-camera">
+                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                </svg>
+              </div>
+              <span class="text">Drag & Drop Files</span>
+              <span class="subtext">Images, PDFs, Videos</span>
+              <div id="imageCounter" class="image-counter">
+                <span id="imageCount">0</span>
+              </div>
+            </div>
+            <div class="upload-actions">
+              <button id="takeScreenshot" class="screenshot-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
+                </svg>
+                Take Screenshot
+              </button>
+            </div>
+            <input type="file" id="imageUpload" accept="image/*,application/pdf,video/*" multiple style="display: none;">
+            <div id="imagePreview"></div>
+            <a id="clearImages" class="clear-images" style="display: none;">Clear all files</a>
+          </div>
+        </div>
+        
+        <button id="generate">
+          <span id="loading" class="loading"></span>
+          Generate Test Cases
+        </button>
       </div>
       
-      <button id="generate">
-        <span id="loading" class="loading"></span>
-        Generate Test Cases
-      </button>
-      
-      <div id="result"></div>
-      <div class="result-actions">
-        <button id="copyButton" class="copy-btn">📋</button>
+      <div class="output-section">
+        <div class="output-header">
+          <h3>Generated Test Cases</h3>
+          <div class="result-actions">
+            <button id="copyButton" class="copy-btn">📋</button>
+          </div>
+        </div>
+        <div id="result"></div>
       </div>
     </div>
   </div>
