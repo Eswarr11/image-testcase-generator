@@ -1380,6 +1380,28 @@
     }
 
     /* Animations for elements */
+    
+    /* Additional responsive styling */
+    @media (max-width: 768px) {
+      .test-case-container {
+        margin-bottom: 1rem;
+        padding: 1rem;
+      }
+      
+      .test-case-content {
+        gap: 1rem;
+      }
+      
+      .title-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+      }
+      
+      .test-case-title {
+        font-size: 1.1rem;
+      }
+    }
     .form-group {
       animation: fadeIn 0.5s ease-out;
       animation-fill-mode: both;
@@ -1583,40 +1605,48 @@
       }
     }
 
-    /* Plain text layout with copy buttons */
+    /* Test case container layout */
     .test-case-container {
       background: var(--surface);
       border: 1px solid var(--border-color);
-      border-radius: 8px;
-      margin-bottom: 1rem;
-      padding: 1rem;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      border-radius: 12px;
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .test-case-container:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
     }
 
     .test-case-header {
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 1rem;
     }
 
     .test-case-meta {
       display: flex;
       gap: 0.5rem;
-      margin-bottom: 0.5rem;
+      margin-bottom: 1rem;
     }
 
     .test-case-id {
       background: var(--primary);
       color: white;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
       font-size: 0.8rem;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     .test-case-priority {
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
+      padding: 0.25rem 0.75rem;
+      border-radius: 20px;
       font-size: 0.8rem;
-      font-weight: 500;
+      font-weight: 600;
     }
 
     .test-case-priority.critical {
@@ -1639,71 +1669,106 @@
       color: white;
     }
 
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      min-height: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+
     .test-case-title {
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-size: 1.2rem;
+      font-weight: 700;
       color: var(--primary);
       margin: 0;
+      flex: 1;
+      line-height: 1.4;
+      padding-right: 1rem;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.5rem;
+      border-radius: 4px;
+      word-wrap: break-word;
     }
 
-    .test-case-body {
+    .test-case-content {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      gap: 1.5rem;
     }
 
-    .section-container {
-      background: var(--background);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      padding: 0.75rem;
+    .test-section {
+      border-left: 3px solid var(--primary);
+      padding-left: 1rem;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .section-header h4 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--primary);
     }
 
     .section-copy-btn {
       background: var(--accent);
       border: none;
-      padding: 0.3rem 0.5rem;
-      border-radius: 4px;
+      padding: 0.4rem 0.6rem;
+      border-radius: 6px;
       cursor: pointer;
       font-size: 0.9rem;
       transition: all 0.2s ease;
       color: white;
-      min-width: 2rem;
+      min-width: 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .section-copy-btn:hover {
       background: var(--accent-hover);
       transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(159, 122, 234, 0.3);
     }
 
     .section-copy-btn:active {
       transform: translateY(0);
     }
 
-    .pre-conditions-list, .steps-list {
-      margin: 0.5rem 0 0 0;
+    .section-copy-btn.copy-success {
+      background: #22c55e !important;
+      color: white !important;
+    }
+
+    .section-content {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .section-content ul, .section-content ol {
+      margin: 0;
       padding-left: 1.5rem;
     }
 
-    .pre-conditions-list li, .steps-list li {
+    .section-content li {
       margin-bottom: 0.5rem;
-      line-height: 1.4;
+      line-height: 1.6;
     }
 
-    .expected-results {
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-
-    .additional-info {
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-
-    .additional-info p {
-      margin: 0.25rem 0;
+    .section-content p {
+      margin: 0;
     }
   </style>
 </head>
@@ -1775,7 +1840,7 @@
               Take Screenshot
             </button>
           </div>
-            <input type="file" id="imageUpload" accept="image/*,application/pdf,video/*" multiple style="display: none;" tabindex="-1">
+            <input type="file" id="imageUpload" accept="image/*,application/pdf,video/*" multiple style="display: none; position: absolute; left: -9999px;" tabindex="-1">
           <div id="imagePreview"></div>
             <a id="clearImages" class="clear-images" style="display: none;">Clear all files</a>
         </div>

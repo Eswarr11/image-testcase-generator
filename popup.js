@@ -124,6 +124,30 @@ document.addEventListener('DOMContentLoaded', function() {
     document.body.style.opacity = '1';
     detectMode();
     initializeApiKey();
+    
+    // Check for temporary state from popup mode (for file upload handling)
+    chrome.storage.local.get(['temp_prompt', 'temp_files', 'trigger_file_upload'], function(result) {
+      if (result.temp_prompt) {
+        promptTextarea.value = result.temp_prompt;
+      }
+      
+      if (result.temp_files && result.temp_files.length > 0) {
+        selectedFiles.push(...result.temp_files);
+        renderFilePreviews();
+        updateFileCounter();
+      }
+      
+      // If we should trigger file upload automatically
+      if (result.trigger_file_upload) {
+        setTimeout(() => {
+          imageUploadInput.click();
+          showToast('Ready for file upload!', 'success', 2000);
+        }, 500);
+      }
+      
+      // Clear temporary data
+      chrome.storage.local.remove(['temp_prompt', 'temp_files', 'trigger_file_upload']);
+    });
   }, 100);
 
   // API Key Management Functions
@@ -300,31 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Function to handle individual section copying
-  window.handleSectionCopy = function(button, content, sectionName) {
-    // Decode the escaped content
-    const decodedContent = content.replace(/\\'/g, "'").replace(/\\"/g, '"').replace(/\\n/g, '\n');
-    
-    navigator.clipboard.writeText(decodedContent).then(() => {
-      // Show success feedback with animation
-      button.classList.add('copy-success');
-      button.innerHTML = '✓';
-      setTimeout(() => {
-        button.innerHTML = '📋';
-        button.classList.remove('copy-success');
-      }, 1500);
-      
-      // Access showToast from the global scope
-      if (window.showToastGlobal) {
-        window.showToastGlobal(`${sectionName} copied to clipboard!`, 'success', 1500);
-      }
-    }).catch(err => {
-      console.error('Failed to copy:', err);
-      if (window.showToastGlobal) {
-        window.showToastGlobal('Failed to copy to clipboard', 'error');
-      }
-    });
-  }
+
 
   // Clear all images button with animation
   if (clearImagesButton) {
@@ -608,6 +608,31 @@ document.addEventListener('DOMContentLoaded', function() {
         ripple.remove();
       }, 600);
       
+      // Check if we're in popup mode
+      if (!document.body.classList.contains('fullscreen-mode')) {
+        // If in popup mode, open in fullscreen first to prevent popup closing
+        showToast('Opening in fullscreen for file upload...', 'success', 2000);
+        
+        // Save current state before opening fullscreen
+        const currentPrompt = promptTextarea.value;
+        chrome.storage.local.set({ 
+          'temp_prompt': currentPrompt,
+          'temp_files': selectedFiles,
+          'trigger_file_upload': true 
+        }, function() {
+          // Open in fullscreen mode
+          chrome.tabs.create({
+            url: chrome.runtime.getURL('popup.html')
+          });
+          
+          // Close the popup
+          if (window.close) {
+            window.close();
+          }
+        });
+        return;
+      }
+      
       // Use a small timeout to ensure the click doesn't interfere with popup
       setTimeout(() => {
         imageUploadInput.click();
@@ -629,6 +654,13 @@ document.addEventListener('DOMContentLoaded', function() {
       if (e.target.files && e.target.files.length > 0) {
         console.log('Files selected:', e.target.files.length);
         handleFiles(e.target.files);
+        
+        // Ensure window stays focused after file selection
+        if (window.focus) {
+          setTimeout(() => {
+            window.focus();
+          }, 100);
+        }
       }
     } catch (error) {
       console.error('Error handling file upload:', error);
@@ -818,8 +850,56 @@ document.addEventListener('DOMContentLoaded', function() {
       return '<p>No test cases generated.</p>';
     }
     
-    // Split content by test case separators (---)
-    const testCaseSections = content.split('---').filter(section => section.trim());
+    console.log('\n=== RAW CONTENT FROM OPENAI ===');
+    console.log(content);
+    console.log('=== END RAW CONTENT ===\n');
+    
+    // Split content by "TEST CASE TITLE:" and rejoin the delimiter
+    let testCaseSections = content.split('TEST CASE TITLE:').filter(section => section.trim());
+    
+    console.log('Split sections:', testCaseSections);
+    
+    // Add back the "TEST CASE TITLE:" to each section (except the first which might be empty)
+    testCaseSections = testCaseSections.map((section, index) => {
+      if (index === 0 && section.trim() === '') {
+        return ''; // Skip empty first section
+      }
+      return 'TEST CASE TITLE:' + section;
+    }).filter(section => section.trim());
+    
+    console.log('Final sections after processing:', testCaseSections);
+    
+    // If no sections found with the standard approach, try alternative parsing
+    if (testCaseSections.length === 0) {
+      console.log('No sections found with TEST CASE TITLE, trying alternative parsing...');
+      
+      // Try splitting by common patterns
+      const alternativePatterns = [
+        /TEST CASE \d+/gi,
+        /Test Case \d+/gi,
+        /TITLE:/gi,
+        /Title:/gi,
+        /^[A-Z][^:]*$/gm // Lines that start with capital and don't contain colons
+      ];
+      
+      for (const pattern of alternativePatterns) {
+        const matches = content.match(pattern);
+        if (matches && matches.length > 0) {
+          console.log('Found alternative pattern:', pattern, 'matches:', matches);
+          // Split by these patterns and see if we can extract sections
+          const sections = content.split(pattern).filter(s => s.trim());
+          if (sections.length > 0) {
+            testCaseSections = sections.map((section, index) => {
+              if (matches[index]) {
+                return matches[index] + section;
+              }
+              return section;
+            }).filter(s => s.trim());
+            break;
+          }
+        }
+      }
+    }
     
     if (testCaseSections.length === 0) {
       return '<p>No test cases found in response.</p>';
@@ -836,7 +916,7 @@ document.addEventListener('DOMContentLoaded', function() {
     `;
     
     testCaseSections.forEach((section, index) => {
-      const lines = section.trim().split('\n').filter(line => line.trim());
+      const lines = section.trim().split('\n');
       
       let title = '';
       let description = '';
@@ -848,54 +928,123 @@ document.addEventListener('DOMContentLoaded', function() {
       
       let currentSection = '';
       
+      console.log(`\n=== PARSING TEST CASE ${index + 1} ===`);
+      console.log('Raw section:', section);
+      console.log('Lines:', lines);
+      console.log('First few lines:');
+      lines.slice(0, 5).forEach((line, i) => {
+        console.log(`  ${i}: "${line}"`);
+      });
+      
       for (let line of lines) {
         line = line.trim();
         
-        if (line.startsWith('**TEST CASE TITLE:**')) {
-          title = line.replace('**TEST CASE TITLE:**', '').trim();
+        if (!line) continue; // Skip empty lines
+        
+        if (line.startsWith('TEST CASE TITLE:') || line.startsWith('**TEST CASE TITLE:**') || 
+            line.startsWith('Test Case Title:') || line.startsWith('**Test Case Title:**') ||
+            line.startsWith('TITLE:') || line.startsWith('**TITLE:**') ||
+            line.startsWith('Title:') || line.startsWith('**Title:**')) {
+          title = line.replace(/\*\*TEST CASE TITLE:\*\*|TEST CASE TITLE:|Test Case Title:|\*\*Test Case Title:\*\*|TITLE:|\*\*TITLE:\*\*|Title:|\*\*Title:\*\*/, '').trim();
+          console.log('Found title:', title);
           currentSection = 'title';
-        } else if (line.startsWith('**DESCRIPTION:**')) {
-          description = line.replace('**DESCRIPTION:**', '').trim();
+        } else if (line.startsWith('DESCRIPTION:') || line.startsWith('**DESCRIPTION:**')) {
+          description = line.replace(/\*\*DESCRIPTION:\*\*|DESCRIPTION:/, '').trim();
           currentSection = 'description';
-        } else if (line.startsWith('**PRE-CONDITIONS:**')) {
+        } else if (line.startsWith('PRE-CONDITIONS:') || line.startsWith('**PRE-CONDITIONS:**')) {
           currentSection = 'preConditions';
-        } else if (line.startsWith('**STEPS:**')) {
+        } else if (line.startsWith('STEPS:') || line.startsWith('**STEPS:**')) {
           currentSection = 'steps';
-        } else if (line.startsWith('**EXPECTED RESULTS:**')) {
-          expectedResults = line.replace('**EXPECTED RESULTS:**', '').trim();
+        } else if (line.startsWith('EXPECTED RESULTS:') || line.startsWith('**EXPECTED RESULTS:**')) {
+          expectedResults = line.replace(/\*\*EXPECTED RESULTS:\*\*|EXPECTED RESULTS:/, '').trim();
           currentSection = 'expectedResults';
-        } else if (line.startsWith('**PRIORITY:**')) {
-          priority = line.replace('**PRIORITY:**', '').trim();
+        } else if (line.startsWith('PRIORITY:') || line.startsWith('**PRIORITY:**')) {
+          priority = line.replace(/\*\*PRIORITY:\*\*|PRIORITY:/, '').trim();
           currentSection = 'priority';
-        } else if (line.startsWith('**REGRESSION CANDIDATE:**')) {
-          regressionCandidate = line.replace('**REGRESSION CANDIDATE:**', '').trim();
+        } else if (line.startsWith('REGRESSION CANDIDATE:') || line.startsWith('**REGRESSION CANDIDATE:**')) {
+          regressionCandidate = line.replace(/\*\*REGRESSION CANDIDATE:\*\*|REGRESSION CANDIDATE:/, '').trim();
           currentSection = 'regressionCandidate';
-        } else if (line) {
+        } else {
           // Handle content under sections
-          if (currentSection === 'description' && description === '') {
-            description = line;
+          if (currentSection === 'title') {
+            if (title === '') {
+              title = line;
+              console.log('Found title on next line:', title);
+            } else {
+              title += ' ' + line;
+            }
           } else if (currentSection === 'description') {
-            description += ' ' + line;
-          } else if (currentSection === 'preConditions' && (line.startsWith('-') || line.startsWith('•'))) {
-            preConditions.push(line.replace(/^[-•]\s*/, ''));
-          } else if (currentSection === 'steps' && /^\d+\./.test(line)) {
-            steps.push(line.replace(/^\d+\.\s*/, ''));
-          } else if (currentSection === 'expectedResults' && expectedResults === '') {
-            expectedResults = line;
+            if (description === '') {
+              description = line;
+            } else {
+              description += ' ' + line;
+            }
+          } else if (currentSection === 'preConditions') {
+            if (line.startsWith('-') || line.startsWith('•') || line.startsWith('*')) {
+              preConditions.push(line.replace(/^[-•*]\s*/, ''));
+            } else {
+              // Handle pre-conditions that don't start with bullets
+              preConditions.push(line);
+            }
+          } else if (currentSection === 'steps') {
+            if (/^\d+\./.test(line)) {
+              steps.push(line.replace(/^\d+\.\s*/, ''));
+            } else if (steps.length > 0) {
+              // Continue previous step if it's a continuation line
+              steps[steps.length - 1] += ' ' + line;
+            }
           } else if (currentSection === 'expectedResults') {
-            expectedResults += ' ' + line;
+            if (expectedResults === '') {
+              expectedResults = line;
+            } else {
+              expectedResults += ' ' + line;
+            }
+          } else if (currentSection === 'regressionCandidate') {
+            if (regressionCandidate === '') {
+              regressionCandidate = line;
+            } else {
+              regressionCandidate += ' ' + line;
+            }
           }
         }
       }
       
-      // Default values
-      if (!title) title = `Test Case ${index + 1}`;
+      // Default values - try to extract title from first meaningful line if not found
+      if (!title) {
+        // Look for the first non-empty line that could be a title
+        const firstMeaningfulLine = lines.find(line => 
+          line.trim() && 
+          !line.startsWith('TEST CASE TITLE:') && 
+          !line.startsWith('DESCRIPTION:') &&
+          !line.startsWith('PRE-CONDITIONS:') &&
+          !line.startsWith('STEPS:') &&
+          !line.startsWith('EXPECTED RESULTS:') &&
+          !line.startsWith('PRIORITY:') &&
+          !line.startsWith('REGRESSION CANDIDATE:')
+        );
+        
+        if (firstMeaningfulLine && firstMeaningfulLine.trim().length > 0) {
+          title = firstMeaningfulLine.trim();
+          console.log('Extracted title from first meaningful line:', title);
+        } else {
+          title = `Test Case ${index + 1}`;
+        }
+      }
+      
       if (!description) description = 'No description provided';
       if (preConditions.length === 0) preConditions = ['No pre-conditions specified'];
       if (steps.length === 0) steps = ['No steps specified'];
       if (!expectedResults) expectedResults = 'No expected results specified';
       if (!priority) priority = 'Medium';
       if (!regressionCandidate) regressionCandidate = 'Not specified';
+      
+      console.log(`Final parsed data for test case ${index + 1}:`, {
+        title, description, preConditions, steps, expectedResults, priority, regressionCandidate
+      });
+      
+      // Debug title specifically
+      console.log('Title that will be displayed:', title);
+      console.log('Title HTML escaped:', escapeHtml(title));
       
       const priorityClass = priority.toLowerCase();
       
@@ -906,59 +1055,55 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="test-case-id">TC_${String(index + 1).padStart(3, '0')}</span>
               <span class="test-case-priority ${priorityClass}">${priority}</span>
             </div>
-            <div class="section-header">
-              <h3 class="test-case-title section-title">${title}</h3>
-              <button class="section-copy-btn" onclick="handleSectionCopy(this, '${escapeHtml(title)}', 'Title')">📋</button>
+            <div class="title-row">
+              <h3 class="test-case-title">${title}</h3>
+              <button class="section-copy-btn" onclick="window.handleSectionCopy(this, '${escapeHtml(title)}', 'Title')">📋</button>
             </div>
           </div>
           
-          <div class="test-case-body">
-            <div class="section-container">
+          <div class="test-case-content">
+            <div class="test-section">
               <div class="section-header">
-                <h4 class="section-title">Description</h4>
-                <button class="section-copy-btn" onclick="handleSectionCopy(this, '${escapeHtml(description)}', 'Description')">📋</button>
+                <h4>Description</h4>
+                <button class="section-copy-btn" onclick="window.handleSectionCopy(this, '${escapeHtml(description)}', 'Description')">📋</button>
               </div>
-              <div class="test-details">
-                <p>${description}</p>
-              </div>
+              <p class="section-content">${description}</p>
             </div>
             
-            <div class="section-container">
+            <div class="test-section">
               <div class="section-header">
-                <h4 class="section-title">Pre-conditions</h4>
-                <button class="section-copy-btn" onclick="handleSectionCopy(this, '${escapeHtml(preConditions.join('\\n'))}', 'Pre-conditions')">📋</button>
+                <h4>Pre-conditions</h4>
+                <button class="section-copy-btn" onclick="window.handleSectionCopy(this, '${escapeHtml(preConditions.join('\\n'))}', 'Pre-conditions')">📋</button>
               </div>
-              <ul class="pre-conditions-list">
+              <ul class="section-content">
                 ${preConditions.map(condition => `<li>${condition}</li>`).join('')}
               </ul>
             </div>
             
-            <div class="section-container">
+            <div class="test-section">
               <div class="section-header">
-                <h4 class="section-title">Steps</h4>
-                <button class="section-copy-btn" onclick="handleSectionCopy(this, '${escapeHtml(steps.map((step, i) => `${i + 1}. ${step}`).join('\\n'))}', 'Steps')">📋</button>
+                <h4>Steps</h4>
+                <button class="section-copy-btn" onclick="window.handleSectionCopy(this, '${escapeHtml(steps.map((step, i) => `${i + 1}. ${step}`).join('\\n'))}', 'Steps')">📋</button>
               </div>
-              <ol class="steps-list">
+              <ol class="section-content">
                 ${steps.map(step => `<li>${step}</li>`).join('')}
               </ol>
             </div>
             
-            <div class="section-container">
+            <div class="test-section">
               <div class="section-header">
-                <h4 class="section-title">Expected Results</h4>
-                <button class="section-copy-btn" onclick="handleSectionCopy(this, '${escapeHtml(expectedResults)}', 'Expected Results')">📋</button>
+                <h4>Expected Results</h4>
+                <button class="section-copy-btn" onclick="window.handleSectionCopy(this, '${escapeHtml(expectedResults)}', 'Expected Results')">📋</button>
               </div>
-              <div class="expected-results">
-                <p>${expectedResults}</p>
-              </div>
+              <p class="section-content">${expectedResults}</p>
             </div>
             
-            <div class="section-container">
+            <div class="test-section">
               <div class="section-header">
-                <h4 class="section-title">Priority & Regression Info</h4>
-                <button class="section-copy-btn" onclick="handleSectionCopy(this, 'Priority: ${escapeHtml(priority)}\\nRegression Candidate: ${escapeHtml(regressionCandidate)}', 'Priority & Regression Info')">📋</button>
+                <h4>Priority & Regression Info</h4>
+                <button class="section-copy-btn" onclick="window.handleSectionCopy(this, 'Priority: ${escapeHtml(priority)}\\nRegression Candidate: ${escapeHtml(regressionCandidate)}', 'Priority & Regression Info')">📋</button>
               </div>
-              <div class="additional-info">
+              <div class="section-content">
                 <p><strong>Priority:</strong> ${priority}</p>
                 <p><strong>Regression Candidate:</strong> ${regressionCandidate}</p>
               </div>
