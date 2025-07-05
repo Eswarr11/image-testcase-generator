@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const resultDiv = document.getElementById('result');
   const loadingSpinner = document.getElementById('loading');
   const closeButton = document.getElementById('closeButton');
+  const fullscreenButton = document.getElementById('fullscreenButton');
   const copyButton = document.getElementById('copyButton');
   const dropArea = document.getElementById('dropArea');
   const imageCounter = document.getElementById('imageCounter');
@@ -65,9 +66,44 @@ document.addEventListener('DOMContentLoaded', function() {
   const modalImageName = document.getElementById('modalImageName');
   const modalClose = document.getElementById('modalClose');
 
+  // Detect if opened in popup or full-screen mode
+  function detectMode() {
+    // Check if opened in a tab (full-screen) or popup
+    const isTab = window.location.protocol === 'chrome-extension:' && 
+                  (window.outerWidth > 700 || window.innerWidth > 700);
+    
+    if (isTab) {
+      document.body.classList.add('fullscreen-mode');
+      document.body.classList.remove('popup-mode');
+      // Hide the fullscreen button when already in fullscreen
+      if (fullscreenButton) {
+        fullscreenButton.style.display = 'none';
+      }
+      // Auto-show output section with placeholder in fullscreen
+      const outputSection = document.querySelector('.output-section');
+      if (outputSection) {
+        outputSection.style.display = 'flex';
+        // Add placeholder text if no result yet
+        if (!resultDiv.textContent.trim()) {
+          resultDiv.innerHTML = '<div style="color: var(--text-secondary); font-style: italic; text-align: center; padding: 60px 20px;">Generated test cases will appear here...</div>';
+          resultDiv.style.display = 'block';
+        }
+      }
+    } else {
+      document.body.classList.add('popup-mode');
+      document.body.classList.remove('fullscreen-mode');
+      // Hide output section in popup mode until generated
+      const outputSection = document.querySelector('.output-section');
+      if (outputSection && !resultDiv.textContent.trim()) {
+        outputSection.style.display = 'none';
+      }
+    }
+  }
+  
   // Apply smooth entrance animations for a premium feel
   setTimeout(() => {
     document.body.style.opacity = '1';
+    detectMode();
   }, 100);
 
   // Close button functionality
@@ -77,6 +113,16 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
       window.close();
     }, 300);
+  });
+
+  // Full-screen button functionality
+  fullscreenButton.addEventListener('click', function() {
+    // Open the extension in a new tab for full-screen experience
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('popup.html')
+    });
+    // Close the popup
+    window.close();
   });
 
   // Screenshot button functionality
@@ -688,6 +734,14 @@ Your output should represent a **full validation checklist** from a product, eng
       if (response.ok) {
         const generatedTestCase = cleanResponseText(responseData.choices[0].message.content);
         resultDiv.textContent = generatedTestCase;
+        
+        // Show output section in fullscreen mode
+        const outputSection = document.querySelector('.output-section');
+        if (document.body.classList.contains('fullscreen-mode')) {
+          outputSection.style.display = 'flex';
+        } else {
+          outputSection.style.display = 'block';
+        }
         
         // Smooth fade in for result
         resultDiv.style.display = 'block';

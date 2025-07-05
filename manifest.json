@@ -27,5 +27,11 @@
   },
   "host_permissions": [
     "https://api.openai.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html"],
+      "matches": ["<all_urls>"]
+    }
   ]
 } 

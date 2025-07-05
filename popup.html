@@ -27,7 +27,7 @@
       padding: 0;
     }
 
-    body {
+    html, body {
       font-family: 'Outfit', sans-serif;
       padding: 0;
       margin: 0;
@@ -37,13 +37,178 @@
       overflow-x: hidden;
       letter-spacing: 0.01em;
       background-image: linear-gradient(135deg, rgba(79, 84, 103, 0.8) 0%, rgba(26, 32, 44, 0.8) 100%);
-      min-height: 100vh;
+      min-width: 600px;
+      min-height: 700px;
+      width: 600px;
+      height: 700px;
+    }
+
+    /* Fullscreen mode adjustments */
+    .fullscreen-mode {
+      width: 100% !important;
+      height: 100% !important;
+      min-width: 100% !important;
+      min-height: 100% !important;
+    }
+
+    .fullscreen-mode .app-container {
+      max-width: 100% !important;
+      margin: 0 !important;
+      min-height: 100vh !important;
+      height: auto !important;
+      border-radius: 0 !important;
+    }
+
+    .fullscreen-mode .content {
+      padding: 40px 60px !important;
+      max-width: 1400px !important;
+      margin: 0 auto !important;
+      display: grid !important;
+      grid-template-columns: 1fr 1fr !important;
+      gap: 40px !important;
+      align-items: start !important;
+    }
+
+    .fullscreen-mode .form-section {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 24px !important;
+    }
+
+    .fullscreen-mode .output-section {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 24px !important;
+      min-height: 600px !important;
+    }
+
+    .fullscreen-mode textarea {
+      height: 180px !important;
+      font-size: 16px !important;
+    }
+
+    .fullscreen-mode .file-btn {
+      height: 200px !important;
+      padding: 30px !important;
+    }
+
+    .fullscreen-mode .file-btn .icon-camera {
+      width: 60px !important;
+      height: 60px !important;
+      margin-bottom: 20px !important;
+    }
+
+    .fullscreen-mode .file-btn .text {
+      font-size: 18px !important;
+      font-weight: 600 !important;
+    }
+
+    .fullscreen-mode .file-btn .subtext {
+      font-size: 16px !important;
+      margin-top: 8px !important;
+    }
+
+    .fullscreen-mode #imagePreview {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)) !important;
+      gap: 16px !important;
+    }
+
+    .fullscreen-mode #result {
+      max-height: 500px !important;
+      font-size: 15px !important;
+      line-height: 1.7 !important;
+      padding: 24px !important;
+      min-height: 400px !important;
+    }
+
+    .fullscreen-mode .form-group {
+      margin-bottom: 32px !important;
+    }
+
+    .fullscreen-mode label {
+      font-size: 16px !important;
+      margin-bottom: 12px !important;
+    }
+
+    .fullscreen-mode button {
+      padding: 16px 24px !important;
+      font-size: 16px !important;
+      font-weight: 600 !important;
+    }
+
+    .fullscreen-mode .header {
+      padding: 24px 60px !important;
+      background: rgba(26, 32, 44, 0.8) !important;
+    }
+
+    .fullscreen-mode h1 {
+      font-size: 24px !important;
+    }
+
+    .fullscreen-mode .output-header h3 {
+      font-size: 20px !important;
+      color: var(--text) !important;
+    }
+
+    .fullscreen-mode .api-key-container {
+      flex-direction: row !important;
+      gap: 12px !important;
+      align-items: flex-end !important;
+    }
+
+    .fullscreen-mode .api-key-container input {
+      flex: 1 !important;
+    }
+
+    .fullscreen-mode .api-key-container button {
+      align-self: stretch !important;
+      width: auto !important;
+      min-width: 120px !important;
+      margin: 0 !important;
+    }
+
+    /* Hide certain elements in fullscreen to save space */
+    .fullscreen-mode .app-container {
+      box-shadow: none !important;
+    }
+
+    /* Responsive adjustments for smaller screens in fullscreen */
+    @media (max-width: 1024px) {
+      .fullscreen-mode .content {
+        grid-template-columns: 1fr !important;
+        gap: 32px !important;
+        padding: 30px 40px !important;
+      }
+      
+      .fullscreen-mode .header {
+        padding: 20px 40px !important;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .fullscreen-mode .content {
+        padding: 20px 30px !important;
+      }
+      
+      .fullscreen-mode .header {
+        padding: 16px 30px !important;
+      }
+      
+      .fullscreen-mode textarea {
+        height: 140px !important;
+      }
+      
+      .fullscreen-mode .file-btn {
+        height: 160px !important;
+        padding: 20px !important;
+      }
     }
 
     .app-container {
       display: flex;
       flex-direction: column;
-      min-height: 100vh;
+      min-height: 100%;
+      height: 100%;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       max-width: 100%;
@@ -89,7 +254,13 @@
       letter-spacing: 0.01em;
     }
 
-    .close-button {
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .fullscreen-button, .close-button {
       background: rgba(255, 255, 255, 0.08);
       border: none;
       cursor: pointer;
@@ -106,15 +277,19 @@
       -webkit-backdrop-filter: blur(10px);
     }
 
-    .close-button:hover {
+    .fullscreen-button:hover, .close-button:hover {
       background: rgba(255, 255, 255, 0.15);
       transform: translateY(-2px);
     }
 
+    .fullscreen-button:hover {
+      background: rgba(159, 122, 234, 0.3);
+    }
+
     .content {
       flex: 1;
-      padding: 24px;
-      max-width: 800px;
+      padding: 32px;
+      max-width: 100%;
       width: 100%;
       margin: 0 auto;
     }
@@ -158,7 +333,7 @@
     }
 
     textarea {
-      height: 100px;
+      height: 120px;
     }
 
     textarea:focus, input[type="password"]:focus, input[type="text"]:focus {
@@ -554,9 +729,54 @@
       box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
     }
 
+    .output-section {
+      display: none;
+    }
+
+    .output-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .output-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
     .result-actions {
       display: flex;
       justify-content: flex-end;
+      margin: 0;
+    }
+
+    /* Show output section when result is displayed */
+    .fullscreen-mode .output-section {
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    /* In popup mode, keep original layout */
+    .popup-mode .output-section {
+      display: block;
+      margin-top: 24px;
+    }
+
+    .popup-mode .form-section,
+    .popup-mode .output-section {
+      display: block;
+    }
+
+    .popup-mode .output-header {
+      display: none;
+    }
+
+    .popup-mode .result-actions {
       margin-top: 10px;
     }
 
@@ -793,6 +1013,7 @@
 
     /* Media queries for responsive design */
     @media (min-width: 768px) {
+      /* When opened in full-screen mode (tab) */
       .app-container {
         max-width: 90%;
         width: 100%;
@@ -800,6 +1021,14 @@
         margin: 20px auto;
         min-height: calc(100vh - 40px);
         box-shadow: var(--shadow);
+      }
+      
+      .content {
+        padding: 40px;
+      }
+      
+      textarea {
+        height: 150px;
       }
       
       #imagePreview {
@@ -810,6 +1039,14 @@
     @media (min-width: 1200px) {
       .app-container {
         max-width: 1000px;
+      }
+      
+      .content {
+        padding: 50px;
+      }
+      
+      textarea {
+        height: 180px;
       }
       
       #imagePreview {
@@ -864,60 +1101,74 @@
         </div>
         <h1>AI Test Case Generator</h1>
       </div>
-      <button id="closeButton" class="close-button">✕</button>
+      <div class="header-actions">
+        <button id="fullscreenButton" class="fullscreen-button" title="Open in full screen">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 3H5C3.9 3 3 3.9 3 5V8M21 8V5C21 3.9 20.1 3 19 3H16M16 21H19C20.1 21 21 20.1 21 19V16M8 21H5C3.9 21 3 20.1 3 19V16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button id="closeButton" class="close-button">✕</button>
+      </div>
     </div>
     
     <div class="content">
-      <div class="form-group">
-        <label for="apiKey">OpenAI API Key</label>
-        <div class="api-key-container">
-          <input type="password" id="apiKey" placeholder="Enter your OpenAI API key">
-          <button id="saveApiKey" class="save-btn">Save</button>
-        </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="prompt">Test Case Prompt</label>
-        <textarea id="prompt" placeholder="Describe the feature or functionality you want to create test cases for..."></textarea>
-      </div>
-      
-      <div class="form-group">
-        <label for="imageUpload">Upload Files <span class="optional">(optional, max 9 - images, PDFs, videos)</span></label>
-        <div class="file-input-container">
-          <div id="dropArea" class="file-btn">
-            <div class="icon-camera">
-              <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
-              </svg>
-            </div>
-            <span class="text">Drag & Drop Files</span>
-            <span class="subtext">Images, PDFs, Videos</span>
-            <div id="imageCounter" class="image-counter">
-              <span id="imageCount">0</span>
-            </div>
+      <div class="form-section">
+        <div class="form-group">
+          <label for="apiKey">OpenAI API Key</label>
+          <div class="api-key-container">
+            <input type="password" id="apiKey" placeholder="Enter your OpenAI API key">
+            <button id="saveApiKey" class="save-btn">Save</button>
           </div>
-          <div class="upload-actions">
-            <button id="takeScreenshot" class="screenshot-btn">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
-              </svg>
-              Take Screenshot
-            </button>
-          </div>
-          <input type="file" id="imageUpload" accept="image/*,application/pdf,video/*" multiple style="display: none;">
-          <div id="imagePreview"></div>
-          <a id="clearImages" class="clear-images" style="display: none;">Clear all files</a>
         </div>
+        
+        <div class="form-group">
+          <label for="prompt">Test Case Prompt</label>
+          <textarea id="prompt" placeholder="Describe the feature or functionality you want to create test cases for..."></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="imageUpload">Upload Files <span class="optional">(optional, max 9 - images, PDFs, videos)</span></label>
+          <div class="file-input-container">
+            <div id="dropArea" class="file-btn">
+              <div class="icon-camera">
+                <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                </svg>
+              </div>
+              <span class="text">Drag & Drop Files</span>
+              <span class="subtext">Images, PDFs, Videos</span>
+              <div id="imageCounter" class="image-counter">
+                <span id="imageCount">0</span>
+              </div>
+            </div>
+            <div class="upload-actions">
+              <button id="takeScreenshot" class="screenshot-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path d="M4,4H7L9,2H15L17,4H20A2,2 0 0,1 22,6V18A2,2 0 0,1 20,20H4A2,2 0 0,1 2,18V6A2,2 0 0,1 4,4M12,7A5,5 0 0,0 7,12A5,5 0 0,0 12,17A5,5 0 0,0 17,12A5,5 0 0,0 12,7M12,9A3,3 0 0,1 15,12A3,3 0 0,1 12,15A3,3 0 0,1 9,12A3,3 0 0,1 12,9Z" />
+                </svg>
+                Take Screenshot
+              </button>
+            </div>
+            <input type="file" id="imageUpload" accept="image/*,application/pdf,video/*" multiple style="display: none;">
+            <div id="imagePreview"></div>
+            <a id="clearImages" class="clear-images" style="display: none;">Clear all files</a>
+          </div>
+        </div>
+        
+        <button id="generate">
+          <span id="loading" class="loading"></span>
+          Generate Test Cases
+        </button>
       </div>
       
-      <button id="generate">
-        <span id="loading" class="loading"></span>
-        Generate Test Cases
-      </button>
-      
-      <div id="result"></div>
-      <div class="result-actions">
-        <button id="copyButton" class="copy-btn">📋</button>
+      <div class="output-section">
+        <div class="output-header">
+          <h3>Generated Test Cases</h3>
+          <div class="result-actions">
+            <button id="copyButton" class="copy-btn">📋</button>
+          </div>
+        </div>
+        <div id="result"></div>
       </div>
     </div>
   </div>
