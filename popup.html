@@ -45,41 +45,65 @@
 
     /* Fullscreen mode adjustments */
     .fullscreen-mode {
-      width: 100% !important;
-      height: 100% !important;
-      min-width: 100% !important;
-      min-height: 100% !important;
+      width: 100vw !important;
+      min-height: 100vh !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
     }
 
     .fullscreen-mode .app-container {
       max-width: 100% !important;
+      width: 100vw !important;
       margin: 0 !important;
       min-height: 100vh !important;
       height: auto !important;
       border-radius: 0 !important;
+      position: relative !important;
+      overflow: visible !important;
     }
 
     .fullscreen-mode .content {
-      padding: 40px 60px !important;
-      max-width: 1400px !important;
-      margin: 0 auto !important;
+      padding: 60px 80px !important;
+      max-width: none !important;
+      width: 100% !important;
+      margin: 0 !important;
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
-      gap: 40px !important;
+      gap: 60px !important;
       align-items: start !important;
+      min-height: calc(100vh - 80px) !important;
+      overflow: visible !important;
+      box-sizing: border-box !important;
     }
 
     .fullscreen-mode .form-section {
       display: flex !important;
       flex-direction: column !important;
-      gap: 24px !important;
+      gap: 32px !important;
+      background: rgba(45, 55, 72, 0.3) !important;
+      border-radius: 16px !important;
+      padding: 40px !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      height: fit-content !important;
+      align-self: start !important;
     }
 
     .fullscreen-mode .output-section {
       display: flex !important;
       flex-direction: column !important;
       gap: 24px !important;
-      min-height: 600px !important;
+      background: rgba(45, 55, 72, 0.3) !important;
+      border-radius: 16px !important;
+      padding: 40px !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      min-height: calc(100vh - 200px) !important;
+      align-self: start !important;
     }
 
     .fullscreen-mode textarea {
@@ -88,24 +112,28 @@
     }
 
     .fullscreen-mode .file-btn {
-      height: 200px !important;
+      height: 180px !important;
       padding: 30px !important;
+      background: rgba(159, 122, 234, 0.1) !important;
+      border: 2px dashed rgba(159, 122, 234, 0.4) !important;
+      margin: 0 !important;
     }
 
     .fullscreen-mode .file-btn .icon-camera {
-      width: 60px !important;
-      height: 60px !important;
-      margin-bottom: 20px !important;
+      width: 50px !important;
+      height: 50px !important;
+      margin-bottom: 16px !important;
+      background: rgba(159, 122, 234, 0.2) !important;
     }
 
     .fullscreen-mode .file-btn .text {
-      font-size: 18px !important;
+      font-size: 16px !important;
       font-weight: 600 !important;
     }
 
     .fullscreen-mode .file-btn .subtext {
-      font-size: 16px !important;
-      margin-top: 8px !important;
+      font-size: 14px !important;
+      margin-top: 6px !important;
     }
 
     .fullscreen-mode #imagePreview {
@@ -114,15 +142,24 @@
     }
 
     .fullscreen-mode #result {
-      max-height: 500px !important;
       font-size: 15px !important;
       line-height: 1.7 !important;
-      padding: 24px !important;
-      min-height: 400px !important;
+      padding: 20px !important;
+      margin: 0 !important;
+      background: rgba(45, 55, 72, 0.2) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 12px !important;
+      overflow-y: auto !important;
+      max-height: 600px !important;
+      min-height: 300px !important;
     }
 
     .fullscreen-mode .form-group {
-      margin-bottom: 32px !important;
+      margin-bottom: 0 !important;
+    }
+    
+    .fullscreen-mode .form-group:last-child {
+      margin-bottom: 0 !important;
     }
 
     .fullscreen-mode label {
@@ -137,8 +174,13 @@
     }
 
     .fullscreen-mode .header {
-      padding: 24px 60px !important;
-      background: rgba(26, 32, 44, 0.8) !important;
+      padding: 20px 80px !important;
+      background: rgba(26, 32, 44, 0.9) !important;
+      backdrop-filter: blur(20px) !important;
+      -webkit-backdrop-filter: blur(20px) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      position: relative !important;
+      z-index: 100 !important;
     }
 
     .fullscreen-mode h1 {
@@ -173,11 +215,32 @@
     }
 
     /* Responsive adjustments for smaller screens in fullscreen */
-    @media (max-width: 1024px) {
+    @media (max-width: 1400px) {
       .fullscreen-mode .content {
         grid-template-columns: 1fr !important;
-        gap: 32px !important;
+        gap: 40px !important;
+        padding: 40px 60px 60px 60px !important;
+        min-height: auto !important;
+      }
+      
+      .fullscreen-mode .header {
+        padding: 20px 60px !important;
+      }
+      
+      .fullscreen-mode .form-section,
+      .fullscreen-mode .output-section {
+        padding: 30px !important;
+      }
+      
+      .fullscreen-mode .output-section {
+        min-height: auto !important;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .fullscreen-mode .content {
         padding: 30px 40px !important;
+        gap: 30px !important;
       }
       
       .fullscreen-mode .header {
@@ -188,6 +251,7 @@
     @media (max-width: 768px) {
       .fullscreen-mode .content {
         padding: 20px 30px !important;
+        gap: 20px !important;
       }
       
       .fullscreen-mode .header {
@@ -199,7 +263,12 @@
       }
       
       .fullscreen-mode .file-btn {
-        height: 160px !important;
+        height: 140px !important;
+        padding: 20px !important;
+      }
+      
+      .fullscreen-mode .form-section,
+      .fullscreen-mode .output-section {
         padding: 20px !important;
       }
     }
