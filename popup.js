@@ -78,6 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const clearImagesButton = document.getElementById('clearImages');
   const screenshotButton = document.getElementById('takeScreenshot');
   const toast = document.getElementById('toast');
+  const csvExportButton = document.getElementById('csvExportButton');
   
   // Image modal elements
   const imageModal = document.getElementById('imageModal');
@@ -322,6 +323,11 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast('Failed to copy to clipboard', 'error');
       });
     });
+  }
+
+  // CSV Export button functionality
+  if (csvExportButton) {
+    csvExportButton.addEventListener('click', handleCSVExport);
   }
 
 
@@ -1122,6 +1128,143 @@ document.addEventListener('DOMContentLoaded', function() {
     return text.replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
   }
 
+  // Function to extract test case data from DOM and convert to CSV
+  function extractTestCasesForCSV() {
+    const testCaseContainers = document.querySelectorAll('.test-case-container');
+    const testCases = [];
+    
+    testCaseContainers.forEach((container, index) => {
+      const testCaseId = `TC_${String(index + 1).padStart(3, '0')}`;
+      
+      // Extract title
+      const titleElement = container.querySelector('.test-case-title');
+      const title = titleElement ? titleElement.textContent.trim() : '';
+      
+      // Extract priority
+      const priorityElement = container.querySelector('.test-case-priority');
+      const priority = priorityElement ? priorityElement.textContent.trim() : 'Medium';
+      
+      // Extract description
+      const descriptionElement = container.querySelector('.test-section:nth-child(1) .section-content');
+      const description = descriptionElement ? descriptionElement.textContent.trim() : '';
+      
+      // Extract pre-conditions
+      const preConditionsElement = container.querySelector('.test-section:nth-child(2) .section-content');
+      const preConditions = preConditionsElement ? 
+        Array.from(preConditionsElement.querySelectorAll('li')).map(li => li.textContent.trim()).join('; ') : '';
+      
+      // Extract steps
+      const stepsElement = container.querySelector('.test-section:nth-child(3) .section-content');
+      const steps = stepsElement ? 
+        Array.from(stepsElement.querySelectorAll('li')).map((li, idx) => `${idx + 1}. ${li.textContent.trim()}`).join('; ') : '';
+      
+      // Extract expected results
+      const expectedResultsElement = container.querySelector('.test-section:nth-child(4) .section-content');
+      const expectedResults = expectedResultsElement ? expectedResultsElement.textContent.trim() : '';
+      
+      // Extract regression candidate info (if present)
+      const regressionCandidateElement = container.querySelector('.test-section:nth-child(5) .section-content');
+      const regressionCandidate = regressionCandidateElement ? regressionCandidateElement.textContent.trim() : '';
+      
+      // Determine if it's a regression candidate
+      const isRegressionCandidate = regressionCandidate.toLowerCase().includes('yes') || 
+                                  priority.toLowerCase() === 'critical' || 
+                                  priority.toLowerCase() === 'high';
+      
+      const testCase = {
+        'Existing Testcase ID': testCaseId,
+        'Summary': title,
+        'Priority': priority,
+        'Tags': isRegressionCandidate ? 'Regression_candidate' : '',
+        'Precondition': preConditions,
+        'Test Steps': steps,
+        'Expected Result': expectedResults
+      };
+      
+      testCases.push(testCase);
+    });
+    
+    return testCases;
+  }
+
+  // Function to convert test cases to CSV format
+  function convertToCSV(testCases) {
+    if (!testCases || testCases.length === 0) {
+      return '';
+    }
+    
+    const headers = Object.keys(testCases[0]);
+    const csvRows = [];
+    
+    // Add headers
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    testCases.forEach(testCase => {
+      const values = headers.map(header => {
+        const value = testCase[header] || '';
+        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+        const escaped = value.replace(/"/g, '""');
+        return escaped.includes(',') || escaped.includes('"') || escaped.includes('\n') ? `"${escaped}"` : escaped;
+      });
+      csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+  }
+
+  // Function to download CSV file
+  function downloadCSV(csvContent, filename = 'test_cases.csv') {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(url);
+  }
+
+  // Function to handle CSV export
+  function handleCSVExport() {
+    try {
+      const testCases = extractTestCasesForCSV();
+      
+      if (testCases.length === 0) {
+        showToast('No test cases found to export', 'error', 3000);
+        return;
+      }
+      
+      const csvContent = convertToCSV(testCases);
+      const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+      const filename = `test_cases_${timestamp}.csv`;
+      
+      downloadCSV(csvContent, filename);
+      
+      // Show success feedback
+      showToast(`Exported ${testCases.length} test cases to ${filename}`, 'success', 3000);
+      
+      // Visual feedback on button
+      const originalText = csvExportButton.textContent;
+      csvExportButton.textContent = '✓ Exported';
+      csvExportButton.classList.add('export-success');
+      
+      setTimeout(() => {
+        csvExportButton.textContent = originalText;
+        csvExportButton.classList.remove('export-success');
+      }, 2000);
+      
+    } catch (error) {
+      console.error('CSV export error:', error);
+      showToast('Failed to export CSV', 'error', 3000);
+    }
+  }
+
   // Handle section copy functionality - Make it global
   window.handleSectionCopy = function(button, content, sectionName) {
     // Unescape the content
@@ -1289,6 +1432,7 @@ document.addEventListener('DOMContentLoaded', function() {
     generateButton.classList.add('generating');
     resultDiv.style.display = 'none';
     copyButton.style.display = 'none';
+    csvExportButton.style.display = 'none';
     
     // Show detailed loading information
     const fileCount = files.length;
@@ -1559,6 +1703,7 @@ So your format must allow direct section-based extraction.
         }, 10);
         
         copyButton.style.display = 'flex';
+        csvExportButton.style.display = 'flex';
         showToast('Test cases generated successfully!');
       } else {
         throw new Error(responseData.error.message || 'Failed to generate test case');
@@ -1567,6 +1712,7 @@ So your format must allow direct section-based extraction.
       resultDiv.textContent = `Error: ${error.message}`;
       resultDiv.style.display = 'block';
       copyButton.style.display = 'none';
+      csvExportButton.style.display = 'none';
       showToast('Error generating test cases', 'error');
     } finally {
       generateButton.disabled = false;

@@ -29,7 +29,7 @@
     "https://api.openai.com/*"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; worker-src 'self' blob:;"
+    "extension_pages": "script-src 'self'; object-src 'self'; worker-src 'self';"
   },
   "web_accessible_resources": [
     {

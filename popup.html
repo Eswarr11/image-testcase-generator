@@ -1266,6 +1266,36 @@
       transform: translateY(-2px);
     }
 
+    .csv-export-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(45, 55, 72, 0.3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      font-size: 14px;
+      transition: var(--transition);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      margin-left: 0.5rem;
+      font-weight: 500;
+    }
+
+    .csv-export-btn:hover {
+      background-color: var(--secondary);
+      border-color: var(--secondary);
+      transform: translateY(-2px);
+    }
+
+    .csv-export-btn.export-success {
+      background-color: rgba(34, 197, 94, 0.2);
+      color: var(--success);
+      border-color: rgba(34, 197, 94, 0.5);
+    }
+
     .section-copy-btn {
       display: flex;
       align-items: center;
@@ -1857,6 +1887,7 @@
           <h3>Generated Test Cases</h3>
             <div class="result-actions">
         <button id="copyButton" class="copy-btn">📋</button>
+        <button id="csvExportButton" class="csv-export-btn" title="Export to CSV">📊 CSV</button>
       </div>
         </div>
         <div id="result"></div>
