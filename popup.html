@@ -22,6 +22,33 @@
       --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
+    /* Light Theme Variables */
+    [data-theme="light"] {
+      --background: #F7FAFC;
+      --card-bg: rgba(255, 255, 255, 0.8);
+      --text: #1A202C;
+      --text-secondary: #4A5568;
+      --border: rgba(0, 0, 0, 0.1);
+      --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Compact Mode */
+    [data-compact="true"] {
+      font-size: 14px;
+    }
+
+    [data-compact="true"] .form-group {
+      margin-bottom: 16px;
+    }
+
+    [data-compact="true"] textarea {
+      height: 100px;
+    }
+
+    [data-compact="true"] .test-case-container {
+      padding: 1rem;
+    }
+
     * {
       box-sizing: border-box;
       margin: 0;
@@ -412,7 +439,7 @@
       gap: 8px;
     }
 
-    .fullscreen-button, .close-button {
+    .fullscreen-button, .close-button, .theme-toggle, .settings-button {
       background: rgba(255, 255, 255, 0.08);
       border: none;
       cursor: pointer;
@@ -429,13 +456,25 @@
       -webkit-backdrop-filter: blur(10px);
     }
 
-    .fullscreen-button:hover, .close-button:hover {
+    .fullscreen-button:hover, .close-button:hover, .theme-toggle:hover, .settings-button:hover {
       background: rgba(255, 255, 255, 0.15);
       transform: translateY(-2px);
     }
 
     .fullscreen-button:hover {
       background: rgba(159, 122, 234, 0.3);
+    }
+
+    .theme-toggle:hover {
+      background: rgba(59, 130, 246, 0.3);
+    }
+
+    .settings-button:hover {
+      background: rgba(34, 197, 94, 0.3);
+    }
+
+    .theme-toggle.light-mode svg {
+      color: #FCD34D;
     }
 
     .content {
@@ -1800,6 +1839,348 @@
     .section-content p {
       margin: 0;
     }
+
+    /* Templates Container Styles */
+    .templates-container {
+      display: flex;
+      gap: 12px;
+    }
+
+    .template-select {
+      flex: 1;
+      padding: 12px 14px;
+      background-color: rgba(45, 55, 72, 0.3);
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      transition: var(--transition);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .template-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(159, 122, 234, 0.15);
+    }
+
+    .load-template-btn {
+      padding: 12px 16px;
+      background: rgba(159, 122, 234, 0.15);
+      border: 1px solid rgba(159, 122, 234, 0.3);
+      color: var(--primary-light);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 14px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .load-template-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .load-template-btn:not(:disabled):hover {
+      background: rgba(159, 122, 234, 0.25);
+      transform: translateY(-2px);
+    }
+
+    /* Test Case Controls Styles */
+    .test-case-controls {
+      background: rgba(45, 55, 72, 0.3);
+      border: 1px solid var(--border);
+      border-radius: var(--border-radius);
+      padding: 16px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .controls-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .search-container {
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 10px 14px;
+      background-color: rgba(45, 55, 72, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(159, 122, 234, 0.15);
+    }
+
+    .filter-container .filter-select {
+      padding: 10px 14px;
+      background-color: rgba(45, 55, 72, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      min-width: 140px;
+    }
+
+    .test-stats {
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .controls-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      padding: 6px 12px;
+      background: rgba(159, 122, 234, 0.1);
+      border: 1px solid rgba(159, 122, 234, 0.3);
+      color: var(--primary-light);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .control-btn:hover {
+      background: rgba(159, 122, 234, 0.2);
+      transform: translateY(-1px);
+    }
+
+    /* Test Case Collapsible Functionality */
+    .test-case-container.collapsed .test-case-content {
+      display: none;
+    }
+
+    .test-case-container .collapse-toggle {
+      background: none;
+      border: none;
+      color: var(--primary-light);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 4px;
+      transition: var(--transition);
+    }
+
+    .test-case-container .collapse-toggle:hover {
+      color: var(--primary);
+      transform: scale(1.1);
+    }
+
+    .test-case-container.collapsed .collapse-toggle {
+      transform: rotate(-90deg);
+    }
+
+    /* Settings Modal Styles */
+    .settings-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 200;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .settings-modal.show {
+      display: flex;
+      opacity: 1;
+    }
+
+    .settings-modal-content {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow: hidden;
+      animation: slideInFromTop 0.3s ease-out;
+    }
+
+    @keyframes slideInFromTop {
+      from {
+        transform: translateY(-30px) scale(0.95);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(26, 32, 44, 0.6);
+    }
+
+    .settings-header h3 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .settings-body {
+      padding: 24px;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .settings-section:last-child {
+      margin-bottom: 0;
+    }
+
+    .settings-section h4 {
+      color: var(--primary-light);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(159, 122, 234, 0.2);
+    }
+
+    .setting-item {
+      margin-bottom: 16px;
+    }
+
+    .setting-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .setting-item label {
+      display: block;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .setting-item label input[type="checkbox"] {
+      margin-right: 8px;
+    }
+
+    .setting-select {
+      width: 100%;
+      padding: 10px 12px;
+      background-color: rgba(45, 55, 72, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+
+    .setting-select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(159, 122, 234, 0.15);
+    }
+
+    .settings-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-top: 1px solid var(--border);
+      background: rgba(26, 32, 44, 0.3);
+    }
+
+    .reset-btn {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #EF4444;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .reset-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .save-settings-btn {
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .save-settings-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(159, 122, 234, 0.4);
+    }
+
+    /* Responsive adjustments for new controls */
+    @media (max-width: 768px) {
+      .controls-row {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .controls-actions {
+        justify-content: center;
+      }
+
+      .templates-container {
+        flex-direction: column;
+      }
+
+      .settings-modal-content {
+        margin: 10px;
+        max-width: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1816,12 +2197,27 @@
         <h1>AI Test Case Generator</h1>
       </div>
       <div class="header-actions">
+        <!-- Theme Toggle Button -->
+        <button id="themeToggle" class="theme-toggle" title="Toggle Dark/Light Theme">
+          <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        
+        <!-- Settings Button -->
+        <button id="settingsButton" class="settings-button" title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        
         <button id="fullscreenButton" class="fullscreen-button" title="Open in full screen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M8 3H5C3.9 3 3 3.9 3 5V8M21 8V5C21 3.9 20.1 3 19 3H16M16 21H19C20.1 21 21 20.1 21 19V16M8 21H5C3.9 21 3 20.1 3 19V16" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-      <button id="closeButton" class="close-button">✕</button>
+        <button id="closeButton" class="close-button">✕</button>
       </div>
     </div>
     
@@ -1835,13 +2231,32 @@
               </div>
               <div id="apiKeyStatus" class="api-key-status" style="display: none;">
                 <div class="api-key-saved-text">
-                  <span class="check-icon">✓</span>
+                  <div>✅</div>
                   <span>API Key is saved and ready to use</span>
                 </div>
                 <button id="changeApiKey" class="change-api-key-btn">Change API Key</button>
               </div>
       </div>
       
+      <!-- Test Case Templates -->
+      <div class="form-group">
+        <label for="templates">Quick Templates <span class="optional">(optional)</span></label>
+        <div class="templates-container">
+          <select id="templateSelect" class="template-select">
+            <option value="">Choose a template...</option>
+            <option value="login">User Login Flow</option>
+            <option value="registration">User Registration</option>
+            <option value="ecommerce">E-commerce Checkout</option>
+            <option value="form">Form Validation</option>
+            <option value="api">API Testing</option>
+            <option value="mobile">Mobile App Testing</option>
+            <option value="dashboard">Dashboard Features</option>
+            <option value="search">Search Functionality</option>
+          </select>
+          <button id="loadTemplate" class="load-template-btn" type="button" disabled>Load Template</button>
+        </div>
+      </div>
+
       <div class="form-group">
         <label for="prompt">Test Case Prompt</label>
         <textarea id="prompt" placeholder="Describe the feature or functionality you want to create test cases for..."></textarea>
@@ -1885,11 +2300,40 @@
       <div class="output-section">
         <div class="output-header">
           <h3>Generated Test Cases</h3>
-            <div class="result-actions">
-        <button id="copyButton" class="copy-btn">📋</button>
-        <button id="csvExportButton" class="csv-export-btn" title="Export to CSV">📊 CSV</button>
-      </div>
+          <div class="result-actions">
+            <button id="copyButton" class="copy-btn">📋</button>
+            <button id="csvExportButton" class="csv-export-btn" title="Export to CSV">📊 CSV</button>
+          </div>
         </div>
+        
+        <!-- Test Case Controls -->
+        <div id="testCaseControls" class="test-case-controls" style="display: none;">
+          <div class="controls-row">
+            <div class="search-container">
+              <input type="text" id="testCaseSearch" placeholder="🔍 Search test cases..." class="search-input">
+            </div>
+            <div class="filter-container">
+              <select id="priorityFilter" class="filter-select">
+                <option value="">All Priorities</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="stats-container">
+              <div class="test-stats">
+                <span id="visibleCount">0</span> of <span id="totalCount">0</span> test cases
+              </div>
+            </div>
+          </div>
+          <div class="controls-actions">
+            <button id="expandAll" class="control-btn">Expand All</button>
+            <button id="collapseAll" class="control-btn">Collapse All</button>
+            <button id="clearSearch" class="control-btn" style="display: none;">Clear Search</button>
+          </div>
+        </div>
+        
         <div id="result"></div>
       </div>
     </div>
@@ -1904,6 +2348,114 @@
     </div>
   </div>
   
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="settings-modal">
+    <div class="settings-modal-content">
+      <div class="settings-header">
+        <h3>Settings</h3>
+        <button id="settingsClose" class="modal-close">✕</button>
+      </div>
+      <div class="settings-body">
+        
+        <!-- Theme Settings -->
+        <div class="settings-section">
+          <h4>Appearance</h4>
+          <div class="setting-item">
+            <label for="themeSelect">Theme</label>
+            <select id="themeSelect" class="setting-select">
+              <option value="dark">Dark Mode</option>
+              <option value="light">Light Mode</option>
+              <option value="auto">Auto (System)</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="compactMode"> 
+              Compact mode (smaller text & spacing)
+            </label>
+          </div>
+        </div>
+
+        <!-- Generation Settings -->
+        <div class="settings-section">
+          <h4>Test Case Generation</h4>
+          <div class="setting-item">
+            <label for="defaultTemplate">Default Template</label>
+            <select id="defaultTemplate" class="setting-select">
+              <option value="">None</option>
+              <option value="login">User Login Flow</option>
+              <option value="registration">User Registration</option>
+              <option value="ecommerce">E-commerce Checkout</option>
+              <option value="form">Form Validation</option>
+              <option value="api">API Testing</option>
+              <option value="mobile">Mobile App Testing</option>
+              <option value="dashboard">Dashboard Features</option>
+              <option value="search">Search Functionality</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="autoExpand" checked> 
+              Auto-expand test cases when generated
+            </label>
+          </div>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="enableTooltips" checked> 
+              Show helpful tooltips
+            </label>
+          </div>
+        </div>
+
+        <!-- Export Settings -->
+        <div class="settings-section">
+          <h4>Export & Data</h4>
+          <div class="setting-item">
+            <label for="exportFormat">Default Export Format</label>
+            <select id="exportFormat" class="setting-select">
+              <option value="csv">CSV</option>
+              <option value="json">JSON</option>
+              <option value="text">Plain Text</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label>
+              <input type="checkbox" id="saveHistory" checked> 
+              Save generation history (local storage)
+            </label>
+          </div>
+        </div>
+
+        <!-- Advanced Settings -->
+        <div class="settings-section">
+          <h4>Advanced</h4>
+          <div class="setting-item">
+            <label for="maxTokens">Max Tokens per Generation</label>
+            <select id="maxTokens" class="setting-select">
+              <option value="2000">2000 (Shorter)</option>
+              <option value="3000" selected>3000 (Default)</option>
+              <option value="4000">4000 (Longer)</option>
+            </select>
+          </div>
+          <div class="setting-item">
+            <label for="temperature">AI Creativity Level</label>
+            <select id="temperature" class="setting-select">
+              <option value="0.1">0.1 (Very Focused)</option>
+              <option value="0.2" selected>0.2 (Focused)</option>
+              <option value="0.3">0.3 (Balanced)</option>
+              <option value="0.5">0.5 (Creative)</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+      <div class="settings-footer">
+        <button id="resetSettings" class="reset-btn">Reset to Defaults</button>
+        <button id="saveSettings" class="save-settings-btn">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div id="toast" class="toast">Screenshot captured!</div>
   

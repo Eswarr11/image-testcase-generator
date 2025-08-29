@@ -80,6 +80,29 @@ document.addEventListener('DOMContentLoaded', function() {
   const toast = document.getElementById('toast');
   const csvExportButton = document.getElementById('csvExportButton');
   
+  // New UI elements
+  const themeToggle = document.getElementById('themeToggle');
+  const themeIcon = document.getElementById('themeIcon');
+  const settingsButton = document.getElementById('settingsButton');
+  const settingsModal = document.getElementById('settingsModal');
+  const settingsClose = document.getElementById('settingsClose');
+  const templateSelect = document.getElementById('templateSelect');
+  const loadTemplateButton = document.getElementById('loadTemplate');
+  const testCaseControls = document.getElementById('testCaseControls');
+  const testCaseSearch = document.getElementById('testCaseSearch');
+  const priorityFilter = document.getElementById('priorityFilter');
+  const visibleCount = document.getElementById('visibleCount');
+  const totalCount = document.getElementById('totalCount');
+  const expandAllButton = document.getElementById('expandAll');
+  const collapseAllButton = document.getElementById('collapseAll');
+  const clearSearchButton = document.getElementById('clearSearch');
+  
+  // Settings elements
+  const themeSelect = document.getElementById('themeSelect');
+  const compactModeCheckbox = document.getElementById('compactMode');
+  const saveSettingsButton = document.getElementById('saveSettings');
+  const resetSettingsButton = document.getElementById('resetSettings');
+  
   // Image modal elements
   const imageModal = document.getElementById('imageModal');
   const modalImage = document.getElementById('modalImage');
@@ -121,10 +144,13 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Apply smooth entrance animations for a premium feel
-  setTimeout(() => {
+      setTimeout(() => {
     document.body.style.opacity = '1';
     detectMode();
     initializeApiKey();
+    initializeTheme();
+    initializeSettings();
+    initializeTemplates();
     
     // Check for temporary state from popup mode (for file upload handling)
     chrome.storage.local.get(['temp_prompt', 'temp_files', 'trigger_file_upload'], function(result) {
@@ -182,6 +208,312 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+
+  // Theme Management Functions
+  function initializeTheme() {
+    chrome.storage.local.get(['theme'], function(result) {
+      const theme = result.theme || 'dark';
+      applyTheme(theme);
+    });
+  }
+
+  function applyTheme(theme) {
+    const body = document.body;
+    
+    if (theme === 'light') {
+      body.setAttribute('data-theme', 'light');
+      updateThemeIcon('light');
+    } else if (theme === 'auto') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      body.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      updateThemeIcon('auto');
+    } else {
+      body.removeAttribute('data-theme');
+      updateThemeIcon('dark');
+    }
+  }
+
+  function updateThemeIcon(theme) {
+    if (theme === 'light') {
+      themeIcon.innerHTML = '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+      themeToggle.classList.add('light-mode');
+    } else {
+      themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+      themeToggle.classList.remove('light-mode');
+    }
+  }
+
+  // Settings Management Functions
+  function initializeSettings() {
+    chrome.storage.local.get(['settings'], function(result) {
+      const settings = result.settings || getDefaultSettings();
+      loadSettings(settings);
+    });
+  }
+
+  function getDefaultSettings() {
+    return {
+      theme: 'dark',
+      compactMode: false,
+      defaultTemplate: '',
+      autoExpand: true,
+      enableTooltips: true,
+      exportFormat: 'csv',
+      saveHistory: true,
+      maxTokens: 3000,
+      temperature: 0.2
+    };
+  }
+
+  function loadSettings(settings) {
+    if (themeSelect) themeSelect.value = settings.theme || 'dark';
+    if (compactModeCheckbox) compactModeCheckbox.checked = settings.compactMode || false;
+    
+    // Apply compact mode
+    if (settings.compactMode) {
+      document.body.setAttribute('data-compact', 'true');
+    } else {
+      document.body.removeAttribute('data-compact');
+    }
+    
+    applyTheme(settings.theme);
+  }
+
+  function saveSettings() {
+    const settings = {
+      theme: themeSelect?.value || 'dark',
+      compactMode: compactModeCheckbox?.checked || false,
+      defaultTemplate: document.getElementById('defaultTemplate')?.value || '',
+      autoExpand: document.getElementById('autoExpand')?.checked || true,
+      enableTooltips: document.getElementById('enableTooltips')?.checked || true,
+      exportFormat: document.getElementById('exportFormat')?.value || 'csv',
+      saveHistory: document.getElementById('saveHistory')?.checked || true,
+      maxTokens: parseInt(document.getElementById('maxTokens')?.value) || 3000,
+      temperature: parseFloat(document.getElementById('temperature')?.value) || 0.2
+    };
+
+    chrome.storage.local.set({ settings }, function() {
+      loadSettings(settings);
+      showToast('Settings saved successfully!', 'success', 2000);
+      closeSettingsModal();
+    });
+  }
+
+  function resetSettings() {
+    const defaultSettings = getDefaultSettings();
+    chrome.storage.local.set({ settings: defaultSettings }, function() {
+      loadSettings(defaultSettings);
+      showToast('Settings reset to defaults!', 'success', 2000);
+    });
+  }
+
+  // Templates Management Functions
+  function initializeTemplates() {
+    templateSelect.addEventListener('change', function() {
+      loadTemplateButton.disabled = !this.value;
+    });
+
+    loadTemplateButton.addEventListener('click', function() {
+      const templateType = templateSelect.value;
+      if (templateType) {
+        const template = getTemplate(templateType);
+        promptTextarea.value = template;
+        showToast(`${templateType.charAt(0).toUpperCase() + templateType.slice(1)} template loaded!`, 'success', 2000);
+      }
+    });
+  }
+
+  function getTemplate(type) {
+    const templates = {
+      login: `Test the user login functionality including:
+- Valid credentials login
+- Invalid username/password combinations
+- Account lockout after multiple failed attempts
+- Password reset functionality
+- Remember me option
+- Social login integrations
+- Security validations and error messages`,
+
+      registration: `Test the user registration process including:
+- Valid user registration with required fields
+- Email verification process
+- Password strength requirements
+- Duplicate email/username handling
+- Terms and conditions acceptance
+- CAPTCHA validation
+- Welcome email functionality`,
+
+      ecommerce: `Test the e-commerce checkout process including:
+- Add items to cart
+- Update cart quantities
+- Apply discount codes/coupons
+- Select shipping options
+- Enter billing/shipping information
+- Payment method selection
+- Order confirmation and receipt
+- Inventory management during checkout`,
+
+      form: `Test form validation including:
+- Required field validations
+- Email format validation
+- Phone number format validation
+- Date and numeric field validations
+- File upload restrictions
+- Form submission with valid/invalid data
+- Error message display and clearing
+- Form autosave functionality`,
+
+      api: `Test API functionality including:
+- GET requests with valid/invalid parameters
+- POST requests with valid/invalid payloads
+- PUT/PATCH requests for data updates
+- DELETE requests and data removal
+- Authentication token validation
+- Rate limiting and throttling
+- Error response handling
+- Data format validation (JSON/XML)`,
+
+      mobile: `Test mobile application functionality including:
+- Touch gestures and interactions
+- Screen orientation changes
+- Network connectivity scenarios
+- Push notification handling
+- App lifecycle (background/foreground)
+- Device-specific features (camera, GPS)
+- Performance on different devices
+- Offline functionality`,
+
+      dashboard: `Test dashboard features including:
+- Data loading and display
+- Filter and search functionality
+- Chart and graph interactions
+- Real-time data updates
+- Export functionality
+- User preference settings
+- Responsive layout on different screens
+- Performance with large datasets`,
+
+      search: `Test search functionality including:
+- Basic keyword search
+- Advanced search with filters
+- Search suggestions and autocomplete
+- Empty search result handling
+- Search result sorting options
+- Pagination of search results
+- Search history and saved searches
+- Performance with large datasets`
+    };
+
+    return templates[type] || '';
+  }
+
+  // Test Case Controls Functions
+  function initializeTestCaseControls() {
+    // Search functionality
+    testCaseSearch.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      filterTestCases();
+      
+      clearSearchButton.style.display = searchTerm ? 'block' : 'none';
+    });
+
+    // Priority filter
+    priorityFilter.addEventListener('change', filterTestCases);
+
+    // Clear search
+    clearSearchButton.addEventListener('click', function() {
+      testCaseSearch.value = '';
+      priorityFilter.value = '';
+      filterTestCases();
+      this.style.display = 'none';
+    });
+
+    // Expand/Collapse all
+    expandAllButton.addEventListener('click', function() {
+      const containers = document.querySelectorAll('.test-case-container');
+      containers.forEach(container => {
+        container.classList.remove('collapsed');
+      });
+      showToast('All test cases expanded', 'success', 1500);
+    });
+
+    collapseAllButton.addEventListener('click', function() {
+      const containers = document.querySelectorAll('.test-case-container');
+      containers.forEach(container => {
+        container.classList.add('collapsed');
+      });
+      showToast('All test cases collapsed', 'success', 1500);
+    });
+  }
+
+  function filterTestCases() {
+    const searchTerm = testCaseSearch?.value?.toLowerCase() || '';
+    const priorityFilter = document.getElementById('priorityFilter')?.value || '';
+    const containers = document.querySelectorAll('.test-case-container');
+    
+    let visibleTotal = 0;
+
+    containers.forEach(container => {
+      const title = container.querySelector('.test-case-title')?.textContent?.toLowerCase() || '';
+      const content = container.textContent?.toLowerCase() || '';
+      const priority = container.querySelector('.test-case-priority')?.textContent?.toLowerCase() || '';
+
+      const matchesSearch = !searchTerm || title.includes(searchTerm) || content.includes(searchTerm);
+      const matchesPriority = !priorityFilter || priority.includes(priorityFilter);
+
+      if (matchesSearch && matchesPriority) {
+        container.style.display = 'block';
+        visibleTotal++;
+      } else {
+        container.style.display = 'none';
+      }
+    });
+
+    updateTestCaseStats(visibleTotal, containers.length);
+  }
+
+  function updateTestCaseStats(visible, total) {
+    if (visibleCount) visibleCount.textContent = visible;
+    if (totalCount) totalCount.textContent = total;
+  }
+
+  // Settings Modal Functions
+  function openSettingsModal() {
+    settingsModal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeSettingsModal() {
+    settingsModal.classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  // Event Listeners for new UI elements
+  themeToggle.addEventListener('click', function() {
+    chrome.storage.local.get(['settings'], function(result) {
+      const settings = result.settings || getDefaultSettings();
+      const currentTheme = settings.theme || 'dark';
+      const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      
+      settings.theme = nextTheme;
+      chrome.storage.local.set({ settings }, function() {
+        applyTheme(nextTheme);
+        showToast(`Switched to ${nextTheme} theme`, 'success', 1500);
+      });
+    });
+  });
+
+  settingsButton.addEventListener('click', openSettingsModal);
+  settingsClose.addEventListener('click', closeSettingsModal);
+  saveSettingsButton.addEventListener('click', saveSettings);
+  resetSettingsButton.addEventListener('click', resetSettings);
+
+  // Close settings modal when clicking outside
+  settingsModal.addEventListener('click', function(e) {
+    if (e.target === settingsModal) {
+      closeSettingsModal();
+    }
+  });
 
   // Close button functionality
   closeButton.addEventListener('click', function() {
@@ -1062,6 +1394,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <span class="test-case-priority ${priorityClass}">${priority}</span>
             </div>
             <div class="title-row">
+              <button class="collapse-toggle" onclick="window.toggleTestCase(this)" title="Toggle collapse">▼</button>
               <h3 class="test-case-title">${title}</h3>
               <button class="section-copy-btn" onclick="window.handleSectionCopy(this, '${escapeHtml(title)}', 'Title')">📋</button>
             </div>
@@ -1175,6 +1508,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'Existing Testcase ID': testCaseId,
         'Summary': title,
         'Priority': priority,
+        'Description': description,
         'Tags': isRegressionCandidate ? 'Regression_candidate' : '',
         'Precondition': preConditions,
         'Test Steps': steps,
@@ -1290,6 +1624,22 @@ document.addEventListener('DOMContentLoaded', function() {
       console.error('Failed to copy text: ', err);
       showToast(`Failed to copy ${sectionName}`, 'error', 2000);
     });
+  }
+
+  // Handle test case collapse toggle - Make it global
+  window.toggleTestCase = function(button) {
+    const container = button.closest('.test-case-container');
+    const isCollapsed = container.classList.contains('collapsed');
+    
+    if (isCollapsed) {
+      container.classList.remove('collapsed');
+      button.textContent = '▼';
+      button.style.transform = 'rotate(0deg)';
+    } else {
+      container.classList.add('collapsed');
+      button.textContent = '▶';
+      button.style.transform = 'rotate(-90deg)';
+    }
   }
 
   // PDF Text Extraction Function
@@ -1496,11 +1846,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
       }
       
+      // Get settings for AI parameters
+      const settingsResult = await new Promise(resolve => {
+        chrome.storage.local.get(['settings'], resolve);
+      });
+      const settings = settingsResult.settings || getDefaultSettings();
+
       // Create the request to OpenAI API
       const requestData = {
         model: "gpt-4o",
-        temperature: 0.2,
-        max_tokens: 3000, // Allowing longer output for full test coverage
+        temperature: settings.temperature || 0.2,
+        max_tokens: settings.maxTokens || 3000, // Allowing longer output for full test coverage
         messages: [
           {
             role: "user",
@@ -1684,6 +2040,10 @@ So your format must allow direct section-based extraction.
         const formattedTestCases = formatPlainTextWithCopyButtons(generatedContent);
         resultDiv.innerHTML = formattedTestCases;
         
+        // Show test case controls and output section
+        testCaseControls.style.display = 'block';
+        initializeTestCaseControls();
+        
         // Show output section in fullscreen mode
         const outputSection = document.querySelector('.output-section');
         if (document.body.classList.contains('fullscreen-mode')) {
@@ -1691,6 +2051,10 @@ So your format must allow direct section-based extraction.
         } else {
           outputSection.style.display = 'block';
         }
+        
+        // Initialize test case statistics
+        const containers = document.querySelectorAll('.test-case-container');
+        updateTestCaseStats(containers.length, containers.length);
         
         // Smooth fade in for result
         resultDiv.style.display = 'block';
