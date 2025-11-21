@@ -1,19 +1,17 @@
 {
-  "name": "jira-test-case-generator",
+  "name": "jira-test-case-generator-web",
   "version": "1.0.0",
-  "description": "A Chrome extension that uses OpenAI's GPT-4o capabilities to generate Jira test cases from prompts and optional images.",
-  "main": "popup.js",
+  "description": "A web application that uses OpenAI's GPT-4o capabilities to generate Jira test cases from prompts and optional images.",
+  "main": "main.js",
   "scripts": {
-    "build": "mkdir -p dist && cp -r manifest.json popup.html popup.js background.js images README.md dist/",
-    "package": "npm run build && cd dist && zip -r ../jira-test-case-generator.zip * && cd ..",
-    "package-simple": "zip -r jira-test-case-generator.zip . -x '*.git*' 'node_modules/*' '*.zip' 'package-lock.json' 'dist/*'",
-    "clean": "rm -rf dist *.zip",
-    "dev": "echo 'Load the extension in Chrome by going to chrome://extensions/ and clicking Load unpacked, then select this directory.'",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "mkdir -p dist && cp -r index.html main.js server.js images README.md package.json dist/",
     "lint": "echo 'Linting not configured yet'",
     "test": "echo 'No tests specified'"
   },
   "keywords": [
-    "chrome-extension",
+    "web-application",
     "jira",
     "test-cases",
     "openai",
@@ -23,7 +21,8 @@
     "automation",
     "ai-powered",
     "image-analysis",
-    "quality-assurance"
+    "quality-assurance",
+    "webapp"
   ],
   "author": "Eswar A",
   "license": "MIT",
@@ -39,6 +38,7 @@
     "node": ">=14.0.0"
   },
   "dependencies": {
-    "@vitalets/google-translate-api": "^9.2.1"
+    "express": "^4.18.0",
+    "path": "^0.12.7"
   }
 }
