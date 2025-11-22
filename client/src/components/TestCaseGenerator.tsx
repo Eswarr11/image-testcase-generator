@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useApiKey } from '../contexts/ApiKeyContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { OpenAIRequest, OpenAIResponse, UploadedFile } from '../types'
 import GenerateButton from './GenerateButton'
@@ -8,7 +8,7 @@ import PromptInput from './PromptInput'
 import TestCaseResult from './TestCaseResult'
 
 export default function TestCaseGenerator() {
-  const { apiKey, isConfigured } = useApiKey()
+  const { user, getApiKey } = useAuth()
   const { showToast } = useToast()
   
   const [prompt, setPrompt] = useState('')
@@ -49,13 +49,20 @@ export default function TestCaseGenerator() {
       return
     }
 
-    if (!isConfigured || !apiKey) {
+    if (!user?.hasApiKey) {
       showToast('Please configure your OpenAI API key first', 'error')
       return
     }
 
     setIsGenerating(true)
     setResult(null)
+
+    const apiKey = await getApiKey()
+    if (!apiKey || !apiKey.trim()) {
+      showToast('Please configure your OpenAI API key first', 'error')
+      setIsGenerating(false)
+      return
+    }
 
     try {
       // Prepare the content array for the message
@@ -189,7 +196,7 @@ IMPORTANT:
     } finally {
       setIsGenerating(false)
     }
-  }, [prompt, uploadedFiles, isConfigured, apiKey, showToast, fileToBase64])
+  }, [prompt, uploadedFiles, user?.hasApiKey, getApiKey, showToast, fileToBase64])
 
   return (
     <div className="space-y-6">
@@ -226,7 +233,7 @@ IMPORTANT:
           
           <GenerateButton
             onClick={generateTestCase}
-            disabled={!isConfigured || !prompt.trim() || isGenerating}
+            disabled={!user?.hasApiKey || !prompt.trim() || isGenerating}
             isGenerating={isGenerating}
           />
         </div>
