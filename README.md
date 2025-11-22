@@ -1,223 +1,213 @@
-# Jira Test Case Generator Web Application
+# Jira Test Case Generator
 
-A modern web application that uses OpenAI's GPT-4o capabilities to generate comprehensive Jira test cases from text prompts and optional images.
+A modern TypeScript web application with React frontend that uses OpenAI's GPT-4o capabilities to generate comprehensive Jira test cases from prompts and optional images.
 
-## Features
+## 🚀 Features
 
-- 🎨 Modern, sleek dark/light mode UI designed for optimal user experience
-- 🤖 AI-powered test case generation using OpenAI's GPT-4o model
-- 📸 Image upload support with drag and drop functionality (up to 9 images)
-- 📋 Template system for different types of testing scenarios
-- 📊 CSV export functionality for easy integration with Jira
-- ⚙️ Customizable settings and preferences
-- 📱 Responsive design that works on all devices
-- 🔒 Secure API key storage using browser's localStorage
-- 🎯 Generate structured test cases with:
-  - Title and Description
-  - Pre-conditions and Post-conditions
-  - Detailed Test Steps
-  - Expected Results
-  - Priority Level assessment
-  - Test data requirements
-  - Error handling scenarios
+- **TypeScript Backend & Frontend**: Full TypeScript implementation for better type safety
+- **React with Tailwind CSS**: Modern, responsive UI with beautiful styling
+- **OpenAI GPT-4o Integration**: Generate comprehensive test cases using AI
+- **Image Analysis**: Upload up to 9 images for context-aware test case generation
+- **Dark/Light Theme**: Automatic theme switching with system preference detection
+- **Export Functionality**: Export test cases to CSV format
+- **Real-time Validation**: API key validation and error handling
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
 
-## Prerequisites
+## 🛠️ Tech Stack
 
-- Node.js (version 14.0.0 or higher)
-- Valid OpenAI API key with access to GPT-4o model
-- Modern web browser (Chrome, Firefox, Safari, Edge)
+### Backend
+- **TypeScript** - Type-safe server-side code
+- **Express.js** - Web framework
+- **Helmet** - Security middleware
+- **CORS** - Cross-origin resource sharing
+- **Compression** - Response compression
 
-## Installation
+### Frontend
+- **React 18** - Modern React with hooks
+- **TypeScript** - Type-safe client-side code
+- **Tailwind CSS** - Utility-first CSS framework
+- **Vite** - Fast build tool and dev server
+- **Lucide React** - Beautiful icons
+- **React Dropzone** - Drag & drop file uploads
 
-1. Clone or download this repository:
+## 📋 Prerequisites
+
+- Node.js 18.0.0 or higher
+- npm or yarn package manager
+- OpenAI API Key
+
+## 🔧 Installation
+
+1. **Clone the repository**
    ```bash
    git clone https://github.com/Eswarr11/image-testcase-generator.git
    cd image-testcase-generator
    ```
 
-2. Install dependencies:
+2. **Install dependencies**
    ```bash
    npm install
    ```
+   This will install both server and client dependencies automatically.
 
-3. Start the web application:
+3. **Build the application**
    ```bash
-   npm start
+   npm run build
    ```
 
-4. Open your browser and navigate to:
-   ```
-   http://localhost:3000
-   ```
+## 🚀 Running the Application
 
-## Usage
-
-### Getting Started
-
-1. **Configure API Key**: 
-   - On first launch, enter your OpenAI API key in the provided field
-   - Click "Save API Key" to store it securely in your browser
-   - The key is stored locally and only used to communicate with OpenAI's API
-
-2. **Create Test Cases**:
-   - Enter a detailed prompt describing the functionality you want to test
-   - Optionally upload images (screenshots, mockups, UI elements) by:
-     - Dragging and dropping files onto the upload area
-     - Clicking the upload area to browse and select files
-     - Maximum of 9 images supported (PNG, JPG, JPEG, GIF)
-   - Click "Generate Test Case" to create comprehensive test cases
-
-3. **Use Templates**:
-   - Click the settings button (⚙️) to access templates
-   - Choose from predefined templates for common testing scenarios
-   - Templates include login, registration, e-commerce, forms, APIs, and more
-
-4. **Export and Copy**:
-   - Use the "Copy to Clipboard" button to copy generated test cases
-   - Export to CSV format for easy import into Jira or other tools
-   - Paste directly into your Jira tickets
-
-### Customization
-
-- **Theme**: Toggle between dark and light modes using the theme button (🌙/☀️)
-- **Compact Mode**: Enable compact mode in settings for a more condensed interface
-- **Templates**: Load predefined templates for different testing scenarios
-
-## API Key Security
-
-- Your OpenAI API key is stored locally in your browser's localStorage
-- The key is never transmitted to any server except OpenAI's official API
-- You can change or remove your API key at any time using the "Change API Key" button
-
-## Supported Image Formats
-
-- PNG (.png)
-- JPEG (.jpg, .jpeg)
-- GIF (.gif)
-- WebP (.webp)
-
-## Development
-
-### Running in Development Mode
-
+### Development Mode (Recommended)
+Start both server and client in development mode:
 ```bash
 npm run dev
 ```
+This will start:
+- Backend server on `http://localhost:3000`
+- Frontend dev server on `http://localhost:5173`
 
-### Building for Production
-
+### Production Mode
+Build and start the production server:
 ```bash
 npm run build
+npm start
+```
+Access the application at `http://localhost:3000`
+
+### Individual Commands
+- **Server only**: `npm run dev:server`
+- **Client only**: `npm run dev:client`
+- **Build server**: `npm run build:server`
+- **Build client**: `npm run build:client`
+
+## 🔑 Configuration
+
+1. **Get OpenAI API Key**
+   - Go to [OpenAI API](https://platform.openai.com/api-keys)
+   - Create a new API key
+   - Copy the key (starts with `sk-`)
+
+2. **Configure in Application**
+   - Open the web application
+   - Enter your API key in the configuration section
+   - The key is stored locally in your browser
+
+## 📖 Usage
+
+1. **Enter API Key**: Configure your OpenAI API key in the application
+2. **Write Prompt**: Describe the functionality you want to test
+3. **Upload Images** (Optional): Add up to 9 screenshots or mockups
+4. **Generate**: Click "Generate Test Case" to create comprehensive test cases
+5. **Export**: Copy to clipboard or export as CSV
+
+### Example Prompts
+- "Test the login functionality with valid and invalid credentials"
+- "Test the shopping cart checkout process with different payment methods"
+- "Test the user registration form validation"
+
+## 🎨 Features in Detail
+
+### Test Case Generation
+- **Comprehensive Structure**: ID, Title, Description, Pre-conditions, Steps, Expected Results, Priority
+- **Multiple Scenarios**: Positive, negative, and edge cases
+- **Context-Aware**: Uses uploaded images for better understanding
+- **Professional Format**: Ready for Jira import
+
+### Image Analysis
+- **Multiple Formats**: PNG, JPG, JPEG, GIF, WebP
+- **Smart Processing**: High-quality image analysis
+- **Preview Interface**: Visual confirmation of uploaded images
+- **Easy Management**: Add/remove images with simple controls
+
+### User Experience
+- **Real-time Feedback**: Toast notifications for all actions
+- **Error Handling**: Comprehensive error messages and recovery
+- **Responsive Design**: Works on all device sizes
+- **Accessibility**: Keyboard navigation and screen reader support
+
+## 🐛 Debugging
+
+### VS Code Integration
+The project includes VS Code configurations for debugging:
+
+1. **Launch TypeScript Server**: Debug the backend in development mode
+2. **Launch Compiled Server**: Debug the production build
+3. **Debug React App**: Debug the frontend in Chrome
+4. **Attach to Server**: Attach debugger to running server
+
+### Available Tasks
+- **dev**: Start development servers
+- **build**: Build both server and client
+- **type-check**: Run TypeScript type checking
+- **lint**: Run ESLint on all files
+
+## 🔒 Security
+
+- **API Key Storage**: Keys are stored locally in browser, never on servers
+- **Direct API Calls**: All OpenAI requests go directly from browser to OpenAI
+- **Security Headers**: Helmet.js provides comprehensive security headers
+- **Input Validation**: All inputs are validated and sanitized
+- **CORS Protection**: Configured for development and production environments
+
+## 📁 Project Structure
+
+```
+├── src/                          # TypeScript server source
+│   └── server.ts                 # Express server
+├── client/                       # React application
+│   ├── src/
+│   │   ├── components/           # React components
+│   │   ├── contexts/            # React contexts
+│   │   ├── types/               # TypeScript types
+│   │   ├── App.tsx              # Main App component
+│   │   ├── main.tsx             # React entry point
+│   │   └── index.css            # Global styles
+│   ├── public/                  # Static assets
+│   ├── tsconfig.json            # Client TypeScript config
+│   └── vite.config.ts           # Vite configuration
+├── .vscode/                     # VS Code configurations
+├── dist/                        # Built server files
+├── tsconfig.json                # Server TypeScript config
+└── package.json                 # Root package.json
 ```
 
-This creates a `dist` folder with all the necessary files for deployment.
-
-### Project Structure
-
-```
-├── index.html          # Main web application page
-├── main.js             # Core application logic
-├── server.js           # Express server for serving the app
-├── package.json        # Node.js dependencies and scripts
-├── images/             # Application icons and assets
-│   ├── icon16.png
-│   ├── icon48.png
-│   ├── icon128.png
-│   └── icon.svg
-└── README.md           # This file
-```
-
-## Deployment
-
-The application can be deployed to any platform that supports Node.js:
-
-### Heroku
-```bash
-heroku create your-app-name
-git push heroku main
-```
-
-### Vercel
-```bash
-npx vercel
-```
-
-### Docker
-```dockerfile
-FROM node:16
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-EXPOSE 3000
-CMD ["npm", "start"]
-```
-
-## Troubleshooting
-
-### Common Issues
-
-1. **API Key Issues**:
-   - Ensure your OpenAI API key is valid and has access to GPT-4o
-   - Check that you have sufficient credits in your OpenAI account
-   - Verify the API key doesn't have any restrictions
-
-2. **Image Upload Issues**:
-   - Ensure images are in supported formats (PNG, JPG, JPEG, GIF)
-   - Check that individual image files are not too large (recommended < 10MB)
-   - Maximum of 9 images can be uploaded at once
-
-3. **Network Issues**:
-   - Check your internet connection
-   - Ensure OpenAI's API (api.openai.com) is accessible from your network
-   - Some corporate firewalls may block external API calls
-
-### Error Messages
-
-- **"API Key not configured"**: Enter your OpenAI API key in the settings
-- **"Please enter a prompt"**: Add a description of what you want to test
-- **"Maximum 9 images allowed"**: Remove some images before adding more
-- **"Only image files are allowed"**: Ensure you're uploading image files only
-
-## Requirements
-
-- **OpenAI API Key**: Required for generating test cases
-- **Modern Browser**: Chrome 80+, Firefox 75+, Safari 13+, Edge 80+
-- **Internet Connection**: Required for API communication
-- **Node.js**: Version 14.0.0 or higher for running the server
-
-## Privacy & Security
-
-- All data processing happens client-side in your browser
-- Images and prompts are only sent to OpenAI's API for processing
-- No user data is stored on any servers
-- API keys are stored locally in your browser only
-
-## License
-
-MIT License - see LICENSE file for details
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-## Support
+## 📄 License
 
-For issues, questions, or feature requests, please:
-- Open an issue on GitHub: https://github.com/Eswarr11/image-testcase-generator/issues
-- Check the troubleshooting section above
-- Ensure you're using a compatible browser and have a valid API key
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Changelog
+## 👨‍💻 Author
+
+**Eswar A**
+- GitHub: [@Eswarr11](https://github.com/Eswarr11)
+
+## 🆘 Support
+
+If you encounter any issues:
+
+1. Check the [Issues](https://github.com/Eswarr11/image-testcase-generator/issues) page
+2. Create a new issue with detailed information
+3. Include error messages, browser console logs, and steps to reproduce
+
+## 🔄 Changelog
+
+### Version 2.0.0
+- **Complete Rewrite**: Migrated from vanilla JavaScript to TypeScript
+- **React Frontend**: Modern React application with Tailwind CSS
+- **Enhanced UI/UX**: Beautiful, responsive design with dark/light themes
+- **Better Architecture**: Modular components and contexts
+- **Improved Error Handling**: Comprehensive error management
+- **VS Code Integration**: Full debugging support
 
 ### Version 1.0.0
-- Initial web application release
-- Converted from Chrome extension to standalone web app
-- Added Express server for easy deployment
-- Maintained all original functionality
-- Added responsive design for mobile devices
-- Enhanced error handling and user feedback
+- Initial release with vanilla JavaScript and HTML
+- Basic OpenAI integration
+- Image upload functionality
+- CSV export capabilities

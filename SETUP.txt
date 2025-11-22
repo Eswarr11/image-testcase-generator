@@ -1,0 +1,75 @@
+JIRA TEST CASE GENERATOR - SETUP INSTRUCTIONS (TypeScript + React)
+==================================================================
+
+REQUIREMENTS:
+- Node.js 18.0.0 or higher
+- OpenAI API Key
+
+INSTALLATION:
+1. Navigate to the project directory: cd image-testcase-generator-1
+2. Install dependencies: npm install
+3. Build the application: npm run build
+4. Start production server: npm start
+5. Open browser to: http://localhost:3000
+
+DEVELOPMENT:
+- Run development mode: npm run dev
+  - Backend server: http://localhost:3000
+  - Frontend dev server: http://localhost:5173
+- Use VS Code debugger configurations in .vscode/
+
+INDIVIDUAL COMMANDS:
+- Server only: npm run dev:server
+- Client only: npm run dev:client
+- Build server: npm run build:server
+- Build client: npm run build:client
+- Type checking: npm run type-check
+- Linting: npm run lint
+
+USAGE:
+1. Enter your OpenAI API key in the web interface
+2. Type a prompt describing what you want to test
+3. Optionally upload images (max 9, up to 10MB each)
+4. Click "Generate Test Case"
+5. Copy to clipboard or export as CSV
+
+DEBUGGING (VS Code):
+- "Launch TypeScript Server (Development)": Debug backend
+- "Debug React App": Debug frontend in Chrome
+- "Attach to Server": Attach to running server
+- Full TypeScript support with source maps
+
+FEATURES:
+- Full TypeScript implementation (backend + frontend)
+- React 18 with modern hooks and contexts
+- Tailwind CSS for beautiful, responsive UI
+- OpenAI GPT-4o integration with image analysis
+- Dark/Light theme with system preference detection
+- Drag & drop image upload
+- Real-time API key validation
+- Comprehensive error handling
+- CSV export with timestamps
+- Toast notifications
+
+ARCHITECTURE:
+Backend (TypeScript):
+- src/server.ts: Express server with security middleware
+- dist/: Compiled JavaScript output
+
+Frontend (React + TypeScript):
+- client/src/: React application source
+- client/src/components/: React components
+- client/src/contexts/: React contexts (Theme, API Key, Toast)
+- client/src/types/: TypeScript type definitions
+- client/dist/: Built React application
+
+Configuration:
+- tsconfig.json: Server TypeScript config
+- client/tsconfig.json: Client TypeScript config
+- .vscode/: VS Code debugging configurations
+- client/tailwind.config.js: Tailwind CSS configuration
+
+API KEY SECURITY:
+Your API key is stored locally in browser storage and never sent to our servers.
+All requests go directly from your browser to OpenAI's API.
+The key is validated in real-time for better user experience.

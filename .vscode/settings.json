@@ -1,0 +1,53 @@
+{
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "files.associations": {
+    "*.html": "html",
+    "*.js": "javascript",
+    "*.ts": "typescript",
+    "*.tsx": "typescriptreact",
+    "*.json": "json"
+  },
+  "emmet.includeLanguages": {
+    "javascript": "javascriptreact",
+    "typescript": "typescriptreact"
+  },
+  "javascript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": true,
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "typescript.inlayHints.parameterNames.enabled": "all",
+  "typescript.inlayHints.functionLikeReturnTypes.enabled": true,
+  "typescript.inlayHints.variableTypes.enabled": true,
+  "eslint.workingDirectories": [
+    ".",
+    "client"
+  ],
+  "files.exclude": {
+    "node_modules": true,
+    "dist": true,
+    "*.log": true,
+    "**/.DS_Store": true
+  },
+  "search.exclude": {
+    "node_modules": true,
+    "dist": true,
+    "*.log": true,
+    "**/.DS_Store": true
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "auto",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
+}
