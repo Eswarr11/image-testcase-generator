@@ -1,15 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Key, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
-import { useApiKey } from '../contexts/ApiKeyContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 
 export default function ApiKeySection() {
-  const { setApiKey, isConfigured, clearApiKey } = useApiKey()
+  const { user, updateApiKey, getApiKey } = useAuth()
   const { showToast } = useToast()
-  const [showInput, setShowInput] = useState(!isConfigured)
+  const [showInput, setShowInput] = useState(!user?.hasApiKey)
   const [inputValue, setInputValue] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
+  const [currentApiKey, setCurrentApiKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (user?.hasApiKey) {
+      loadCurrentApiKey()
+    }
+  }, [user?.hasApiKey])
+
+  const loadCurrentApiKey = async () => {
+    const apiKey = await getApiKey()
+    setCurrentApiKey(apiKey)
+  }
 
   const validateApiKey = (key: string): boolean => {
     return key.trim().startsWith('sk-') && key.trim().length > 20
@@ -39,10 +51,12 @@ export default function ApiKeySection() {
       })
 
       if (testResponse.ok) {
-        setApiKey(trimmedKey)
-        setInputValue('')
-        setShowInput(false)
-        showToast('API key saved and validated successfully!', 'success')
+        const success = await updateApiKey(trimmedKey)
+        if (success) {
+          setInputValue('')
+          setShowInput(false)
+          setCurrentApiKey(trimmedKey)
+        }
       } else {
         throw new Error('Invalid API key')
       }
@@ -58,12 +72,6 @@ export default function ApiKeySection() {
     setInputValue('')
   }
 
-  const handleClearApiKey = () => {
-    clearApiKey()
-    setShowInput(true)
-    showToast('API key removed', 'info')
-  }
-
   return (
     <div className="card p-6 animate-slide-up">
       <div className="flex items-center space-x-2 mb-4">
@@ -71,7 +79,7 @@ export default function ApiKeySection() {
         <h2 className="text-lg font-semibold">OpenAI API Configuration</h2>
       </div>
 
-      {isConfigured && !showInput ? (
+      {user?.hasApiKey && !showInput ? (
         <div className="space-y-4">
           <div className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <CheckCircle className="w-5 h-5 text-green-600" />
@@ -80,18 +88,27 @@ export default function ApiKeySection() {
             </span>
           </div>
           
+          {currentApiKey && (
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current API Key:</p>
+              <div className="font-mono text-sm text-gray-800 dark:text-gray-200">
+                {showKey ? currentApiKey : `${currentApiKey.substring(0, 7)}...${currentApiKey.substring(currentApiKey.length - 4)}`}
+                <button
+                  onClick={() => setShowKey(!showKey)}
+                  className="ml-2 text-primary-600 hover:text-primary-700"
+                >
+                  {showKey ? <EyeOff className="w-4 h-4 inline" /> : <Eye className="w-4 h-4 inline" />}
+                </button>
+              </div>
+            </div>
+          )}
+          
           <div className="flex flex-wrap gap-2">
             <button
               onClick={handleChangeApiKey}
               className="btn-secondary text-sm"
             >
               Change API Key
-            </button>
-            <button
-              onClick={handleClearApiKey}
-              className="text-sm px-3 py-1 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
-            >
-              Remove Key
             </button>
           </div>
         </div>
@@ -135,7 +152,7 @@ export default function ApiKeySection() {
               <button
                 onClick={handleSaveApiKey}
                 disabled={!inputValue.trim() || isValidating}
-                className="btn-primary flex items-center space-x-2"
+                className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-semibold py-2.5 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 flex items-center space-x-2"
               >
                 {isValidating ? (
                   <>
@@ -147,7 +164,7 @@ export default function ApiKeySection() {
                 )}
               </button>
               
-              {isConfigured && (
+              {user?.hasApiKey && (
                 <button
                   onClick={() => setShowInput(false)}
                   className="btn-secondary"
@@ -160,7 +177,7 @@ export default function ApiKeySection() {
 
           <div className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
             <p className="font-medium mb-1">Security Note:</p>
-            <p>Your API key is stored locally in your browser and never sent to our servers. All requests go directly from your browser to OpenAI's API.</p>
+            <p>Your API key is stored securely in your account and never shared with others. All requests go directly from your browser to OpenAI's API.</p>
           </div>
         </div>
       )}

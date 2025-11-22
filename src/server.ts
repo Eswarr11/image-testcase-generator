@@ -3,7 +3,15 @@ import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import { fileURLToPath } from 'url';
+import session from 'express-session';
+import cookieParser from 'cookie-parser';
+
+// Import auth components
+import authRoutes from './routes/auth';
+import { optionalAuth } from './middleware/auth';
+import { startCleanupJob } from './jobs/cleanup';
+import { ensureDataDirectory } from './utils/dataDir';
+import Database from './database/db';
 
 // Types
 interface HealthResponse {
@@ -31,6 +39,12 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const CLIENT_BUILD_PATH = path.join(process.cwd(), 'client', 'dist');
 const isDevelopment = NODE_ENV === 'development';
 
+// Initialize data directory for SQLite
+ensureDataDirectory();
+
+// Initialize database
+const db = Database.getInstance();
+
 // Express app setup
 const app: Application = express();
 
@@ -49,6 +63,21 @@ app.use(helmet({
 }));
 
 app.use(compression());
+
+// Cookie parser
+app.use(cookieParser());
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: !isDevelopment,
+    httpOnly: true,
+    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+  }
+}));
 
 // CORS configuration
 app.use(cors({
@@ -85,8 +114,11 @@ if (!isDevelopment) {
   }));
 }
 
+// Authentication routes
+app.use('/api/auth', authRoutes);
+
 // API Routes
-app.get('/api/health', (req: Request, res: Response<HealthResponse>) => {
+app.get('/api/health', optionalAuth, (req: Request, res: Response<HealthResponse>) => {
   const packageJson = require('../package.json') as { version: string };
   
   res.json({
@@ -99,7 +131,7 @@ app.get('/api/health', (req: Request, res: Response<HealthResponse>) => {
 });
 
 // API endpoint for server-side OpenAI proxy (optional future feature)
-app.post('/api/generate-test-case', (req: Request, res: Response<ApiError>) => {
+app.post('/api/generate-test-case', optionalAuth, (req: Request, res: Response<ApiError>) => {
   res.status(501).json({
     error: 'Not Implemented',
     message: 'Server-side generation not implemented. Use client-side generation with your own API key.',
@@ -165,9 +197,13 @@ const server = app.listen(PORT, () => {
   if (isDevelopment) {
     console.log(`🎨 Frontend dev server: http://localhost:5173`);
     console.log(`🔗 API health check: http://localhost:${PORT}/api/health`);
+    console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth/*`);
   }
   
   console.log('🔄 Press Ctrl+C to stop the server');
+  
+  // Start cleanup job
+  startCleanupJob();
 });
 
 export default app;
