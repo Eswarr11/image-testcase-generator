@@ -76,6 +76,7 @@ export default function TestCaseResult({ result, isGenerating }: TestCaseResultP
       const summary = extractField(/\*\*Test Case Title:\*\*\s*(.+?)(?:\s*\*\*|\n|$)/i)
       const priority = extractField(/\*\*Priority Level:\*\*\s*(.+?)(?:\s*\*\*|\n|$)/i) || 'Medium'
       const description = extractField(/\*\*Description:\*\*\s*(.+?)(?:\s*\*\*|\n\n)/is)
+      const regressionCandidate = extractField(/\*\*Regression Candidate:\*\*\s*(.+?)(?:\s*\*\*|\n|$)/i)
       
       // Extract pre-conditions (handle both bullet points and plain text)
       let precondition = ''
@@ -111,6 +112,11 @@ export default function TestCaseResult({ result, isGenerating }: TestCaseResultP
           .replace(/"/g, '""')
       }
 
+      // Determine tags based on regression candidate status
+      const tags = regressionCandidate && regressionCandidate.toLowerCase().includes('yes') 
+        ? 'Regression_candidate' 
+        : ''
+
       // Only add if we have meaningful content
       if (summary || description || testSteps || expectedResult) {
         testCases.push({
@@ -118,7 +124,7 @@ export default function TestCaseResult({ result, isGenerating }: TestCaseResultP
           summary,
           priority,
           description,
-          tags: '', // Can be enhanced later if needed
+          tags,
           precondition,
           testSteps,
           expectedResult

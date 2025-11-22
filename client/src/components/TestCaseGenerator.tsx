@@ -91,6 +91,7 @@ export default function TestCaseGenerator() {
 **Test Case Title:** [Clear, descriptive title]
 **Test Case ID:** TC-[XXX] (use sequential numbers like TC-001, TC-002, etc.)
 **Description:** [Brief description of what is being tested]
+**Regression Candidate:** [YES/NO - Determine if this test case should be included in regression testing. Answer YES if: the test covers core functionality, critical user flows, previously failed areas, integration points, or features that are frequently modified. Answer NO for basic unit tests, one-time setup tests, or purely cosmetic validations.]
 **Pre-conditions:**
 - [Condition 1]
 - [Condition 2]
@@ -115,7 +116,12 @@ export default function TestCaseGenerator() {
 
 ---
 
-IMPORTANT: Use exactly this markdown format structure. Include both positive and negative test scenarios, edge cases, and accessibility considerations where applicable. Generate multiple test cases covering different scenarios.`,
+IMPORTANT: 
+1. Use exactly this markdown format structure
+2. For "Regression Candidate", carefully analyze each test case and determine if it should be part of regression testing
+3. Include both positive and negative test scenarios, edge cases, and accessibility considerations where applicable
+4. Generate multiple test cases covering different scenarios
+5. Be thoughtful about regression candidate selection - focus on business-critical paths and areas prone to breaking`,
           },
           {
             role: 'user',
