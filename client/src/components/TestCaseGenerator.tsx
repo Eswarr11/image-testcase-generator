@@ -1,11 +1,11 @@
-import { useState, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useApiKey } from '../contexts/ApiKeyContext'
 import { useToast } from '../contexts/ToastContext'
-import PromptInput from './PromptInput'
-import ImageUpload from './ImageUpload'
+import { OpenAIRequest, OpenAIResponse, UploadedFile } from '../types'
 import GenerateButton from './GenerateButton'
+import ImageUpload from './ImageUpload'
+import PromptInput from './PromptInput'
 import TestCaseResult from './TestCaseResult'
-import { UploadedFile, OpenAIRequest, OpenAIResponse } from '../types'
 
 export default function TestCaseGenerator() {
   const { apiKey, isConfigured } = useApiKey()
@@ -15,6 +15,24 @@ export default function TestCaseGenerator() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [result, setResult] = useState<string | null>(null)
+
+  // Force reset uploaded files to clear any blob URLs
+  const resetFiles = useCallback(() => {
+    setUploadedFiles([])
+    showToast('All images cleared. Please re-upload to fix preview issues.', 'info')
+  }, [showToast])
+
+  // Debug: Log file preview URLs
+  useEffect(() => {
+    if (uploadedFiles.length > 0) {
+      console.log('Current file preview URLs:', uploadedFiles.map(f => ({
+        name: f.file.name,
+        preview: f.preview,
+        isBlob: f.preview.startsWith('blob:'),
+        isData: f.preview.startsWith('data:')
+      })));
+    }
+  }, [uploadedFiles])
 
   const fileToBase64 = useCallback((file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -184,6 +202,21 @@ IMPORTANT: Use exactly this markdown format structure. Include both positive and
             onFilesChange={setUploadedFiles}
             disabled={isGenerating}
           />
+          
+          {/* Debug: Force clear blob URLs */}
+          {uploadedFiles.some(f => f.preview.startsWith('blob:')) && (
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded border border-yellow-300 dark:border-yellow-700">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
+                ⚠️ Old blob URLs detected. Clear and re-upload images to fix preview issues.
+              </p>
+              <button 
+                onClick={resetFiles}
+                className="text-sm px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded"
+              >
+                Clear All Images
+              </button>
+            </div>
+          )}
           
           <GenerateButton
             onClick={generateTestCase}
