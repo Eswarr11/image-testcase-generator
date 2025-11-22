@@ -1,6 +1,6 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, X, Image as ImageIcon } from 'lucide-react'
+import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { UploadedFile } from '../types'
 import { useToast } from '../contexts/ToastContext'
 
@@ -15,52 +15,75 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 
 export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: ImageUploadProps) {
   const { showToast } = useToast()
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const createImagePreview = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        if (e.target?.result) {
+          resolve(e.target.result as string)
+        } else {
+          reject(new Error('Failed to read file'))
+        }
+      }
+      reader.onerror = () => reject(new Error('Failed to read file'))
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (isProcessing) return
+    
+    setIsProcessing(true)
     const newFiles: UploadedFile[] = []
     
-    acceptedFiles.forEach((file) => {
-      if (uploadedFiles.length + newFiles.length >= MAX_FILES) {
-        showToast(`Maximum ${MAX_FILES} images allowed`, 'warning')
-        return
+    try {
+      for (const file of acceptedFiles) {
+        if (uploadedFiles.length + newFiles.length >= MAX_FILES) {
+          showToast(`Maximum ${MAX_FILES} images allowed`, 'warning')
+          break
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+          showToast(`File ${file.name} is too large. Maximum size is 10MB.`, 'error')
+          continue
+        }
+
+        try {
+          const id = Math.random().toString(36).substring(2, 9)
+          const preview = await createImagePreview(file)
+          
+          newFiles.push({ file, preview, id })
+        } catch (error) {
+          console.error('Error creating preview for file:', file.name, error)
+          showToast(`Failed to create preview for ${file.name}`, 'error')
+        }
       }
 
-      if (file.size > MAX_FILE_SIZE) {
-        showToast(`File ${file.name} is too large. Maximum size is 10MB.`, 'error')
-        return
+      if (newFiles.length > 0) {
+        onFilesChange([...uploadedFiles, ...newFiles])
+        showToast(`${newFiles.length} image(s) uploaded successfully`, 'success')
       }
-
-      const id = Math.random().toString(36).substring(2, 9)
-      const preview = URL.createObjectURL(file)
-      
-      newFiles.push({ file, preview, id })
-    })
-
-    if (newFiles.length > 0) {
-      onFilesChange([...uploadedFiles, ...newFiles])
-      showToast(`${newFiles.length} image(s) uploaded successfully`, 'success')
+    } finally {
+      setIsProcessing(false)
     }
-  }, [uploadedFiles, onFilesChange, showToast])
+  }, [uploadedFiles, onFilesChange, showToast, isProcessing])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp']
     },
-    disabled: disabled ?? false,
+    disabled: (disabled ?? false) || isProcessing,
     multiple: true,
   })
 
   const removeFile = (id: string) => {
-    const fileToRemove = uploadedFiles.find(f => f.id === id)
-    if (fileToRemove) {
-      URL.revokeObjectURL(fileToRemove.preview)
-    }
     onFilesChange(uploadedFiles.filter(f => f.id !== id))
   }
 
   const clearAllFiles = () => {
-    uploadedFiles.forEach(file => URL.revokeObjectURL(file.preview))
     onFilesChange([])
     showToast('All images cleared', 'info')
   }
@@ -99,19 +122,28 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
       >
         <input {...getInputProps()} />
         
-        <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragActive ? 'text-primary-600' : 'text-gray-400'}`} />
-        
-        {isDragActive ? (
-          <p className="text-primary-600 font-medium">Drop the images here...</p>
+        {isProcessing ? (
+          <>
+            <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary-600 animate-spin" />
+            <p className="text-primary-600 font-medium">Processing images...</p>
+          </>
         ) : (
-          <div>
-            <p className="text-gray-600 dark:text-gray-400 font-medium mb-2">
-              Drag & drop images here, or click to browse
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-500">
-              PNG, JPG, JPEG, GIF, WebP • Max {MAX_FILES} files • Max 10MB each
-            </p>
-          </div>
+          <>
+            <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragActive ? 'text-primary-600' : 'text-gray-400'}`} />
+            
+            {isDragActive ? (
+              <p className="text-primary-600 font-medium">Drop the images here...</p>
+            ) : (
+              <div>
+                <p className="text-gray-600 dark:text-gray-400 font-medium mb-2">
+                  Drag & drop images here, or click to browse
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-500">
+                  PNG, JPG, JPEG, GIF, WebP • Max {MAX_FILES} files • Max 10MB each
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -124,6 +156,19 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
                   src={file.preview}
                   alt={file.file.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // Fallback if image fails to load
+                    const target = e.target as HTMLImageElement
+                    target.style.display = 'none'
+                    const parent = target.parentElement
+                    if (parent && !parent.querySelector('.fallback-icon')) {
+                      const fallback = document.createElement('div')
+                      fallback.className = 'fallback-icon w-full h-full flex items-center justify-center text-gray-400'
+                      fallback.innerHTML = '🖼️'
+                      parent.appendChild(fallback)
+                    }
+                  }}
+                  loading="lazy"
                 />
               </div>
               
