@@ -3,6 +3,8 @@ import { useApiKey } from '../contexts/ApiKeyContext'
 import { useToast } from '../contexts/ToastContext'
 import { SYSTEM_PROMPT } from '../constants/systemPrompt'
 import { OpenAIRequest, OpenAIResponse, UploadedFile } from '../types'
+
+const OPENAI_REQUEST_TIMEOUT_MS = 180_000
 import GenerateButton from './GenerateButton'
 import ImageUpload from './ImageUpload'
 import PromptInput from './PromptInput'
@@ -96,7 +98,7 @@ export default function TestCaseGenerator() {
       }
 
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 60000)
+      const timeoutId = setTimeout(() => controller.abort(), OPENAI_REQUEST_TIMEOUT_MS)
 
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
@@ -140,7 +142,7 @@ export default function TestCaseGenerator() {
 
       let errorMessage = (error as Error).message
       if ((error as Error).name === 'AbortError') {
-        errorMessage = 'Request timeout. Please try again.'
+        errorMessage = `Request timed out after ${OPENAI_REQUEST_TIMEOUT_MS / 1000} seconds. Try a shorter prompt or fewer images.`
       } else if (errorMessage.includes('Failed to fetch')) {
         errorMessage = 'Network error. Please check your internet connection and try again.'
       }
