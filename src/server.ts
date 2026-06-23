@@ -3,17 +3,7 @@ import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import session from 'express-session';
-import cookieParser from 'cookie-parser';
 
-// Import auth components
-import authRoutes from './routes/auth';
-import { optionalAuth } from './middleware/auth';
-import { startCleanupJob } from './jobs/cleanup';
-import { ensureDataDirectory } from './utils/dataDir';
-import Database from './database/db';
-
-// Types
 interface HealthResponse {
   status: 'OK' | 'ERROR';
   message: string;
@@ -33,22 +23,13 @@ interface RequestWithTiming extends Request {
   startTime?: number;
 }
 
-// Configuration
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const CLIENT_BUILD_PATH = path.join(process.cwd(), 'client', 'dist');
 const isDevelopment = NODE_ENV === 'development';
 
-// Initialize data directory for SQLite
-ensureDataDirectory();
-
-// Initialize database
-const db = Database.getInstance();
-
-// Express app setup
 const app: Application = express();
 
-// Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -64,48 +45,29 @@ app.use(helmet({
 
 app.use(compression());
 
-// Cookie parser
-app.use(cookieParser());
-
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-super-secret-key-change-in-production',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: !isDevelopment,
-    httpOnly: true,
-    maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-  }
-}));
-
-// CORS configuration
 app.use(cors({
   origin: isDevelopment ? ['http://localhost:5173', 'http://localhost:3000'] : true,
   credentials: true,
 }));
 
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Request timing middleware (development only)
 if (isDevelopment) {
   app.use((req: RequestWithTiming, res: Response, next: NextFunction) => {
     req.startTime = Date.now();
     const originalSend = res.send;
-    
+
     res.send = function(data) {
       const duration = Date.now() - (req.startTime || 0);
       console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - ${res.statusCode} - ${duration}ms`);
       return originalSend.call(this, data);
     };
-    
+
     next();
   });
 }
 
-// Serve static files from React build
 if (!isDevelopment) {
   app.use(express.static(CLIENT_BUILD_PATH, {
     maxAge: '1d',
@@ -114,13 +76,9 @@ if (!isDevelopment) {
   }));
 }
 
-// Authentication routes
-app.use('/api/auth', authRoutes);
-
-// API Routes
-app.get('/api/health', optionalAuth, (req: Request, res: Response<HealthResponse>) => {
+app.get('/api/health', (req: Request, res: Response<HealthResponse>) => {
   const packageJson = require('../package.json') as { version: string };
-  
+
   res.json({
     status: 'OK',
     message: 'Jira Test Case Generator API is running',
@@ -130,22 +88,19 @@ app.get('/api/health', optionalAuth, (req: Request, res: Response<HealthResponse
   });
 });
 
-// API endpoint for server-side OpenAI proxy (optional future feature)
-app.post('/api/generate-test-case', optionalAuth, (req: Request, res: Response<ApiError>) => {
+app.post('/api/generate-test-case', (req: Request, res: Response<ApiError>) => {
   res.status(501).json({
     error: 'Not Implemented',
     message: 'Server-side generation not implemented. Use client-side generation with your own API key.',
   });
 });
 
-// Serve React app for all non-API routes (SPA routing)
 if (!isDevelopment) {
   app.get('*', (req: Request, res: Response) => {
     res.sendFile(path.join(CLIENT_BUILD_PATH, 'index.html'));
   });
 }
 
-// 404 handler for API routes
 app.use('/api/*', (req: Request, res: Response<ApiError>) => {
   res.status(404).json({
     error: 'API endpoint not found',
@@ -154,10 +109,9 @@ app.use('/api/*', (req: Request, res: Response<ApiError>) => {
   });
 });
 
-// Global error handling middleware
 app.use((err: Error, req: Request, res: Response<ApiError>, next: NextFunction) => {
   console.error('Server Error:', err.stack);
-  
+
   const errorResponse: ApiError = {
     error: 'Internal Server Error',
     message: isDevelopment ? err.message : 'Something went wrong!',
@@ -170,7 +124,6 @@ app.use((err: Error, req: Request, res: Response<ApiError>, next: NextFunction) 
   res.status(500).json(errorResponse);
 });
 
-// Graceful shutdown handling
 const gracefulShutdown = (signal: string) => {
   console.log(`${signal} received. Shutting down gracefully...`);
   server.close(() => {
@@ -178,7 +131,6 @@ const gracefulShutdown = (signal: string) => {
     process.exit(0);
   });
 
-  // Force close after 10 seconds
   setTimeout(() => {
     console.error('Could not close connections in time, forcefully shutting down');
     process.exit(1);
@@ -188,22 +140,17 @@ const gracefulShutdown = (signal: string) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-// Start server
 const server = app.listen(PORT, () => {
   console.log('🚀 Jira Test Case Generator API Server');
   console.log(`📍 Server running on http://localhost:${PORT}`);
   console.log(`🌍 Environment: ${NODE_ENV}`);
-  
+
   if (isDevelopment) {
     console.log(`🎨 Frontend dev server: http://localhost:5173`);
     console.log(`🔗 API health check: http://localhost:${PORT}/api/health`);
-    console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth/*`);
   }
-  
+
   console.log('🔄 Press Ctrl+C to stop the server');
-  
-  // Start cleanup job
-  startCleanupJob();
 });
 
 export default app;

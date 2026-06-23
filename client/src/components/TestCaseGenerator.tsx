@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useApiKey } from '../contexts/ApiKeyContext'
 import { useToast } from '../contexts/ToastContext'
+import { SYSTEM_PROMPT } from '../constants/systemPrompt'
 import { OpenAIRequest, OpenAIResponse, UploadedFile } from '../types'
 import GenerateButton from './GenerateButton'
 import ImageUpload from './ImageUpload'
@@ -8,21 +9,19 @@ import PromptInput from './PromptInput'
 import TestCaseResult from './TestCaseResult'
 
 export default function TestCaseGenerator() {
-  const { user, getApiKey } = useAuth()
+  const { apiKey, isConfigured } = useApiKey()
   const { showToast } = useToast()
-  
+
   const [prompt, setPrompt] = useState('')
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [result, setResult] = useState<string | null>(null)
 
-  // Force reset uploaded files to clear any blob URLs
   const resetFiles = useCallback(() => {
     setUploadedFiles([])
     showToast('All images cleared. Please re-upload to fix preview issues.', 'info')
   }, [showToast])
 
-  // Debug: Log file preview URLs
   useEffect(() => {
     if (uploadedFiles.length > 0) {
       console.log('Current file preview URLs:', uploadedFiles.map(f => ({
@@ -49,7 +48,7 @@ export default function TestCaseGenerator() {
       return
     }
 
-    if (!user?.hasApiKey) {
+    if (!isConfigured || !apiKey?.trim()) {
       showToast('Please configure your OpenAI API key first', 'error')
       return
     }
@@ -57,22 +56,13 @@ export default function TestCaseGenerator() {
     setIsGenerating(true)
     setResult(null)
 
-    const apiKey = await getApiKey()
-    if (!apiKey || !apiKey.trim()) {
-      showToast('Please configure your OpenAI API key first', 'error')
-      setIsGenerating(false)
-      return
-    }
-
     try {
-      // Prepare the content array for the message
       const contentArray: Array<{
         type: 'text' | 'image_url'
         text?: string
         image_url?: { url: string; detail: 'high' }
       }> = [{ type: 'text', text: prompt }]
 
-      // Add images if any
       if (uploadedFiles.length > 0) {
         const imagePromises = uploadedFiles.map(async (file) => ({
           type: 'image_url' as const,
@@ -91,44 +81,7 @@ export default function TestCaseGenerator() {
         messages: [
           {
             role: 'system',
-            content: `You are a QA expert specializing in creating comprehensive Jira test cases. Generate detailed, professional test cases with the following EXACT structure for each test case:
-
-## Test Case [Number]: [Clear Title]
-
-**Test Case Title:** [Clear, descriptive title]
-**Test Case ID:** TC-[XXX] (use sequential numbers like TC-001, TC-002, etc.)
-**Description:** [Brief description of what is being tested]
-**Regression Candidate:** [YES/NO - Determine if this test case should be included in regression testing. Answer YES if: the test covers core functionality, critical user flows, previously failed areas, integration points, or features that are frequently modified. Answer NO for basic unit tests, one-time setup tests, or purely cosmetic validations.]
-**Pre-conditions:**
-- [Condition 1]
-- [Condition 2]
-
-**Test Steps:**
-1. [Step 1]
-2. [Step 2]
-3. [Step 3]
-
-**Expected Results:**
-- [Expected result 1]
-- [Expected result 2]
-
-**Priority Level:** [Critical/High/Medium/Low]
-**Test Data:**
-- [Data requirement 1]
-- [Data requirement 2]
-
-**Post-conditions:**
-- [Post condition 1]
-- [Post condition 2]
-
----
-
-IMPORTANT: 
-1. Use exactly this markdown format structure
-2. For "Regression Candidate", carefully analyze each test case and determine if it should be part of regression testing
-3. Include both positive and negative test scenarios, edge cases, and accessibility considerations where applicable
-4. Generate multiple test cases covering different scenarios
-5. Be thoughtful about regression candidate selection - focus on business-critical paths and areas prone to breaking`,
+            content: SYSTEM_PROMPT,
           },
           {
             role: 'user',
@@ -196,33 +149,32 @@ IMPORTANT:
     } finally {
       setIsGenerating(false)
     }
-  }, [prompt, uploadedFiles, user?.hasApiKey, getApiKey, showToast, fileToBase64])
+  }, [prompt, uploadedFiles, isConfigured, apiKey, showToast, fileToBase64])
 
   return (
     <div className="space-y-6">
       <div className="card p-6 animate-slide-up">
         <h2 className="text-lg font-semibold mb-4">Generate Test Case</h2>
-        
+
         <div className="space-y-6">
-          <PromptInput 
+          <PromptInput
             value={prompt}
             onChange={setPrompt}
             disabled={isGenerating}
           />
-          
+
           <ImageUpload
             uploadedFiles={uploadedFiles}
             onFilesChange={setUploadedFiles}
             disabled={isGenerating}
           />
-          
-          {/* Debug: Force clear blob URLs */}
+
           {uploadedFiles.some(f => f.preview.startsWith('blob:')) && (
             <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded border border-yellow-300 dark:border-yellow-700">
               <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
-                ⚠️ Old blob URLs detected. Clear and re-upload images to fix preview issues.
+                Old blob URLs detected. Clear and re-upload images to fix preview issues.
               </p>
-              <button 
+              <button
                 onClick={resetFiles}
                 className="text-sm px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded"
               >
@@ -230,10 +182,10 @@ IMPORTANT:
               </button>
             </div>
           )}
-          
+
           <GenerateButton
             onClick={generateTestCase}
-            disabled={!user?.hasApiKey || !prompt.trim() || isGenerating}
+            disabled={!isConfigured || !prompt.trim() || isGenerating}
             isGenerating={isGenerating}
           />
         </div>
