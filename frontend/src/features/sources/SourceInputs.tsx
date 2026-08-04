@@ -182,7 +182,7 @@ export default function SourceInputs({
         <span>Source links</span>
       </div>
       <p className="text-xs text-gray-600 dark:text-gray-400 -mt-3">
-        Add Confluence and/or Figma links. After Figma Preview, pick which frames to include.
+        Confluence links are enough to generate. Figma links are optional — leave them blank if you do not need designs.
       </p>
 
       <div className="space-y-3">
@@ -263,6 +263,7 @@ export default function SourceInputs({
           <label className="flex items-center space-x-2 text-sm font-medium">
             <PenTool className="w-4 h-4 text-primary-600" />
             <span>Figma design links</span>
+            <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
           </label>
           <button
             type="button"
@@ -273,6 +274,9 @@ export default function SourceInputs({
             <Plus className="w-3 h-3" /> Add link
           </button>
         </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Optional. Leave empty to generate from Confluence/prompt/images only. Preview only if you add a link.
+        </p>
 
         {figmaUrls.map((url, index) => {
           const row = figmaRows[index] || emptyRow()
@@ -281,11 +285,12 @@ export default function SourceInputs({
             <div key={`fig-${index}`} className="space-y-2">
               <div className="flex gap-2">
                 <input
-                  type="url"
+                  type="text"
+                  inputMode="url"
                   value={url}
                   onChange={(e) => updateFigmaUrl(index, e.target.value)}
                   disabled={disabled}
-                  placeholder="https://www.figma.com/design/:fileKey/...?node-id=1-2"
+                  placeholder="https://www.figma.com/design/:fileKey/...?node-id=1-2 (optional)"
                   className="input-field"
                 />
                 <button

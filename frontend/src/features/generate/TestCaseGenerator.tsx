@@ -59,7 +59,10 @@ export default function TestCaseGenerator() {
     [confluenceUrls]
   )
   const filledFigma = useMemo(
-    () => figmaUrls.map((u) => u.trim()).filter(Boolean),
+    () =>
+      figmaUrls
+        .map((u) => u.trim())
+        .filter((u) => u.length > 0 && /figma\.com\//i.test(u)),
     [figmaUrls]
   )
 
@@ -91,7 +94,10 @@ export default function TestCaseGenerator() {
       }
 
       const confluenceList = confluenceUrls.map((u) => u.trim()).filter(Boolean)
-      const figmaList = figmaUrls.map((u) => u.trim()).filter(Boolean)
+      // Only treat real Figma URLs as sources — blank/partial text must not block generate
+      const figmaList = figmaUrls
+        .map((u) => u.trim())
+        .filter((u) => u.length > 0 && /figma\.com\//i.test(u))
 
       if (
         confluenceList.length === 0 &&
@@ -99,7 +105,7 @@ export default function TestCaseGenerator() {
         uploadedFiles.length === 0 &&
         !prompt.trim()
       ) {
-        showToast('Enter a prompt, paste a Confluence/Figma link, or upload images', 'warning')
+        showToast('Enter a prompt, paste a Confluence link, or upload images', 'warning')
         return
       }
 

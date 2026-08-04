@@ -25,7 +25,7 @@ export default function PromptInput({ value, onChange, disabled }: PromptInputPr
       />
       
       <div className="text-xs text-gray-600 dark:text-gray-400">
-        <p>Tip: Primary input is the Confluence + Figma links above. Use this to steer which scenarios to emphasize.</p>
+        <p>Tip: Use Confluence links as the main source. Figma links and this prompt are optional.</p>
       </div>
     </div>
   )

@@ -18,8 +18,8 @@ export default function CredentialsSection() {
   } = useCredentials()
   const { showToast } = useToast()
 
-  const allConfigured = isOpenAIConfigured && isAtlassianConfigured && isFigmaConfigured
-  const [expanded, setExpanded] = useState(!allConfigured)
+  const readyForCollapse = isOpenAIConfigured
+  const [expanded, setExpanded] = useState(!readyForCollapse)
 
   const [openaiInput, setOpenaiInput] = useState('')
   const [showOpenai, setShowOpenai] = useState(false)
@@ -47,8 +47,23 @@ export default function CredentialsSection() {
     if (isOpenAIConfigured) setEditingOpenai(false)
     if (isAtlassianConfigured) setEditingAtlassian(false)
     if (isFigmaConfigured) setEditingFigma(false)
-    if (allConfigured) setExpanded(false)
-  }, [isOpenAIConfigured, isAtlassianConfigured, isFigmaConfigured, allConfigured])
+    if (readyForCollapse) setExpanded(false)
+  }, [isOpenAIConfigured, isAtlassianConfigured, isFigmaConfigured, readyForCollapse])
+
+  const statusBadge = (ok: boolean, label: string, optional = false) => (
+    <span
+      className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
+        ok
+          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
+          : optional
+            ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+            : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
+      }`}
+    >
+      {ok ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+      {ok ? label : optional ? `${label} optional` : label}
+    </span>
+  )
 
   const handleSaveOpenAI = async () => {
     const trimmed = openaiInput.trim()
@@ -131,19 +146,6 @@ export default function CredentialsSection() {
     }
   }
 
-  const statusBadge = (ok: boolean, label: string) => (
-    <span
-      className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full ${
-        ok
-          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200'
-          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200'
-      }`}
-    >
-      {ok ? <CheckCircle className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
-      {label}
-    </span>
-  )
-
   return (
     <div className="card p-6 animate-slide-up">
       <button
@@ -157,8 +159,8 @@ export default function CredentialsSection() {
         </div>
         <div className="flex items-center gap-2">
           {statusBadge(isOpenAIConfigured, 'OpenAI')}
-          {statusBadge(isAtlassianConfigured, 'Atlassian')}
-          {statusBadge(isFigmaConfigured, 'Figma')}
+          {statusBadge(isAtlassianConfigured, 'Atlassian', true)}
+          {statusBadge(isFigmaConfigured, 'Figma', true)}
           {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
         </div>
       </button>
@@ -344,7 +346,11 @@ export default function CredentialsSection() {
           <section className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-6">
             <h3 className="text-sm font-semibold flex items-center gap-2">
               <PenTool className="w-4 h-4" /> Figma
+              <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
             </h3>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Only needed if you add Figma design links when generating. Skip this for Confluence-only runs.
+            </p>
             {isFigmaConfigured && !editingFigma ? (
               <div className="space-y-3">
                 <div className="flex items-center space-x-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
