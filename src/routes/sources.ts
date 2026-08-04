@@ -131,7 +131,12 @@ router.post('/figma', async (req: Request, res: Response) => {
     if (!figmaUrl) {
       return res.status(400).json({ error: 'Bad Request', message: 'figmaUrl is required' });
     }
-    const result = await fetchFigmaContent(figmaUrl, session.figma.accessToken);
+    const selectedFrameIds = Array.isArray(req.body?.selectedFrameIds)
+      ? (req.body.selectedFrameIds as unknown[]).map((id) => String(id)).filter(Boolean)
+      : undefined;
+    const result = await fetchFigmaContent(figmaUrl, session.figma.accessToken, {
+      ...(selectedFrameIds && selectedFrameIds.length > 0 ? { selectedFrameIds } : {}),
+    });
     return res.json(result);
   } catch (err) {
     return sendServiceError(res, err);

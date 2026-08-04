@@ -90,10 +90,49 @@ export interface Credentials {
 // Source fetch Types
 export type SourceKind = 'confluence' | 'figma';
 
+export interface FigmaFrameInfo {
+  id: string;
+  name: string;
+  type: string;
+  selected?: boolean;
+  image?: string;
+}
+
 export interface SourceFetchResult {
   source: SourceKind;
   title: string;
   url: string;
   text: string;
   images?: string[];
+  frames?: FigmaFrameInfo[];
 }
+
+export interface StructuredTestCase {
+  id: string;
+  title: string;
+  description: string;
+  preconditions: string[];
+  steps: string[];
+  expected: string[];
+  priority: string;
+  regression: string;
+  testData: string[];
+  postconditions: string[];
+  coversRequirements?: string[];
+  sources?: string[];
+}
+
+export interface CoverageItem {
+  requirementId: string;
+  requirementText: string;
+  coveredBy: string[];
+  status: 'covered' | 'uncovered';
+}
+
+export interface GenerateResponse {
+  testCases: StructuredTestCase[];
+  markdown: string;
+  requirements: Array<{ id: string; text: string }>;
+  coverage: CoverageItem[];
+}
+

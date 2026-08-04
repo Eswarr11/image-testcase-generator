@@ -4,9 +4,21 @@ import { fetchWithTimeout } from '../utils/atlassianAuth';
 import { figmaFetch, figmaRateLimitMessage, isFigmaRateLimit } from '../utils/figmaFetch';
 import { SourceFetchResult, SourceServiceError } from './confluence';
 
-const MAX_FIGMA_IMAGES = 3;
+const MAX_FIGMA_IMAGES = 8;
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const FIGMA_EXPORT_SCALE = 2;
+const MAX_TEXT_LAYERS = 300;
+
+export interface FigmaFrameInfo {
+  id: string;
+  name: string;
+  type: string;
+}
+
+export interface FigmaFetchOptions {
+  /** If provided, only export these frame/node ids. Otherwise auto-select. */
+  selectedFrameIds?: string[];
+}
 
 interface FigmaNode {
   id: string;
@@ -16,26 +28,68 @@ interface FigmaNode {
   children?: FigmaNode[];
 }
 
-function collectTextLayers(node: FigmaNode, depth: number, maxDepth: number, out: string[]): void {
-  if (depth > maxDepth) return;
-  if (node.type === 'TEXT' && node.characters?.trim()) {
-    out.push(`- [${node.name}] ${node.characters.trim()}`);
-  }
-  if (node.children) {
-    for (const child of node.children) {
-      collectTextLayers(child, depth + 1, maxDepth, out);
+function isFrameLike(type: string): boolean {
+  return type === 'FRAME' || type === 'COMPONENT' || type === 'COMPONENT_SET' || type === 'SECTION' || type === 'INSTANCE';
+}
+
+function collectChildFrames(node: FigmaNode, out: FigmaFrameInfo[], max: number): void {
+  if (out.length >= max) return;
+  if (!node.children) return;
+  for (const child of node.children) {
+    if (out.length >= max) break;
+    if (isFrameLike(child.type)) {
+      out.push({ id: child.id, name: child.name || child.id, type: child.type });
+    }
+    // Also look one level deeper for nested screens
+    if (child.children) {
+      for (const grand of child.children) {
+        if (out.length >= max) break;
+        if (isFrameLike(grand.type)) {
+          out.push({ id: grand.id, name: grand.name || grand.id, type: grand.type });
+        }
+      }
     }
   }
 }
 
-function collectTopFrames(node: FigmaNode, out: FigmaNode[]): void {
-  if (node.type === 'FRAME' || node.type === 'COMPONENT' || node.type === 'COMPONENT_SET') {
-    out.push(node);
+function collectTopFrames(node: FigmaNode, out: FigmaFrameInfo[], max: number): void {
+  if (out.length >= max) return;
+  if (isFrameLike(node.type) && node.type !== 'SECTION') {
+    out.push({ id: node.id, name: node.name || node.id, type: node.type });
     return;
   }
   if (node.children) {
     for (const child of node.children) {
-      collectTopFrames(child, out);
+      collectTopFrames(child, out, max);
+      if (out.length >= max) break;
+    }
+  }
+}
+
+function collectUiSummary(node: FigmaNode, depth: number, maxDepth: number, out: string[]): void {
+  if (depth > maxDepth || out.length >= MAX_TEXT_LAYERS) return;
+
+  if (isFrameLike(node.type)) {
+    out.push(`${'  '.repeat(depth)}▸ Frame: ${node.name} (${node.type})`);
+  }
+
+  if (node.type === 'TEXT' && node.characters?.trim()) {
+    const label = node.name && !/^text\s*\d*$/i.test(node.name) ? node.name : 'label';
+    out.push(`${'  '.repeat(depth)}- [${label}] ${node.characters.trim()}`);
+  }
+
+  // Heuristic: name patterns that look interactive
+  if (
+    /button|btn|tab|link|menu|nav|input|field|toggle|checkbox|radio|dropdown|select/i.test(node.name) &&
+    node.type !== 'TEXT'
+  ) {
+    out.push(`${'  '.repeat(depth)}• Control: ${node.name} (${node.type})`);
+  }
+
+  if (node.children) {
+    for (const child of node.children) {
+      collectUiSummary(child, depth + 1, maxDepth, out);
+      if (out.length >= MAX_TEXT_LAYERS) break;
     }
   }
 }
@@ -53,9 +107,31 @@ async function imageUrlToDataUrl(imageUrl: string): Promise<string | null> {
   }
 }
 
+function throwFigmaHttp(status: number, detail: string, context: string): never {
+  if (status === 401 || status === 403) {
+    throw new SourceServiceError(
+      401,
+      'Unauthorized',
+      'Figma denied access. Check your Personal Access Token and file permissions.'
+    );
+  }
+  if (status === 404) {
+    throw new SourceServiceError(404, 'Not Found', 'Figma file or node was not found.');
+  }
+  if (status === 429) {
+    throw new SourceServiceError(429, 'Rate Limited', figmaRateLimitMessage());
+  }
+  throw new SourceServiceError(
+    502,
+    'Bad Gateway',
+    `Figma ${context} API error (${status})${detail ? `: ${detail.slice(0, 300)}` : ''}`
+  );
+}
+
 export async function fetchFigmaContent(
   figmaUrl: string,
-  accessToken: string
+  accessToken: string,
+  options: FigmaFetchOptions = {}
 ): Promise<SourceFetchResult> {
   let parsed;
   try {
@@ -68,35 +144,17 @@ export async function fetchFigmaContent(
   let fileName = parsed.fileKey;
   let target: FigmaNode | null = null;
   let nodeLabel = 'document';
-  const textLayers: string[] = [];
-  const imageNodeIds: string[] = [];
+  const availableFrames: FigmaFrameInfo[] = [];
 
   try {
     if (parsed.nodeId) {
       const nodesUrl =
         `https://api.figma.com/v1/files/${parsed.fileKey}/nodes` +
-        `?ids=${encodeURIComponent(parsed.nodeId)}&depth=2`;
+        `?ids=${encodeURIComponent(parsed.nodeId)}&depth=4`;
       const nodesRes = await figmaFetch(nodesUrl, token, 90_000);
       if (!nodesRes.ok) {
         const detail = await nodesRes.text().catch(() => '');
-        if (nodesRes.status === 401 || nodesRes.status === 403) {
-          throw new SourceServiceError(
-            401,
-            'Unauthorized',
-            'Figma denied access. Check your Personal Access Token and that it can open this file.'
-          );
-        }
-        if (nodesRes.status === 404) {
-          throw new SourceServiceError(404, 'Not Found', 'Figma file or node was not found.');
-        }
-        if (isFigmaRateLimit(nodesRes)) {
-          throw new SourceServiceError(429, 'Rate Limited', figmaRateLimitMessage());
-        }
-        throw new SourceServiceError(
-          502,
-          'Bad Gateway',
-          `Figma nodes API error (${nodesRes.status})${detail ? `: ${detail.slice(0, 300)}` : ''}`
-        );
+        throwFigmaHttp(nodesRes.status, detail, 'nodes');
       }
 
       const nodesJson = await nodesRes.json() as {
@@ -108,34 +166,22 @@ export async function fetchFigmaContent(
       if (nodeEntry?.document) {
         target = nodeEntry.document;
         nodeLabel = `${target.type}: ${target.name}`;
-        imageNodeIds.push(parsed.nodeId);
+        availableFrames.push({
+          id: target.id,
+          name: target.name || target.id,
+          type: target.type,
+        });
+        collectChildFrames(target, availableFrames, MAX_FIGMA_IMAGES);
       } else {
-        nodeLabel = `node ${parsed.nodeId} (exporting screenshot only)`;
-        imageNodeIds.push(parsed.nodeId);
+        nodeLabel = `node ${parsed.nodeId}`;
+        availableFrames.push({ id: parsed.nodeId, name: parsed.nodeId, type: 'NODE' });
       }
     } else {
-      const fileUrl = `https://api.figma.com/v1/files/${parsed.fileKey}?depth=2`;
+      const fileUrl = `https://api.figma.com/v1/files/${parsed.fileKey}?depth=3`;
       const fileRes = await figmaFetch(fileUrl, token, 90_000);
       if (!fileRes.ok) {
         const detail = await fileRes.text().catch(() => '');
-        if (fileRes.status === 401 || fileRes.status === 403) {
-          throw new SourceServiceError(
-            401,
-            'Unauthorized',
-            'Figma denied access. Check your Personal Access Token and file permissions.'
-          );
-        }
-        if (fileRes.status === 404) {
-          throw new SourceServiceError(404, 'Not Found', 'Figma file was not found.');
-        }
-        if (isFigmaRateLimit(fileRes)) {
-          throw new SourceServiceError(429, 'Rate Limited', figmaRateLimitMessage());
-        }
-        throw new SourceServiceError(
-          502,
-          'Bad Gateway',
-          `Figma file API error (${fileRes.status})${detail ? `: ${detail.slice(0, 300)}` : ''}`
-        );
+        throwFigmaHttp(fileRes.status, detail, 'file');
       }
 
       const file = await fileRes.json() as { name?: string; document?: FigmaNode };
@@ -145,77 +191,114 @@ export async function fetchFigmaContent(
       }
       target = file.document;
       nodeLabel = 'top-level frames';
-      const frames: FigmaNode[] = [];
-      collectTopFrames(file.document, frames);
-      for (const frame of frames.slice(0, MAX_FIGMA_IMAGES)) {
-        imageNodeIds.push(frame.id);
-      }
-      if (imageNodeIds.length === 0 && file.document.children?.[0]) {
-        imageNodeIds.push(file.document.children[0].id);
+      collectTopFrames(file.document, availableFrames, MAX_FIGMA_IMAGES);
+      if (availableFrames.length === 0 && file.document.children?.[0]) {
+        availableFrames.push({
+          id: file.document.children[0].id,
+          name: file.document.children[0].name || file.document.children[0].id,
+          type: file.document.children[0].type,
+        });
       }
     }
 
-    if (target) collectTextLayers(target, 0, 12, textLayers);
+    // Resolve which frames to export
+    let exportIds: string[];
+    if (options.selectedFrameIds && options.selectedFrameIds.length > 0) {
+      const allowed = new Set(availableFrames.map((f) => f.id));
+      exportIds = options.selectedFrameIds.filter((id) => allowed.has(id) || !availableFrames.length);
+      if (exportIds.length === 0) {
+        exportIds = availableFrames.slice(0, MAX_FIGMA_IMAGES).map((f) => f.id);
+      }
+    } else {
+      exportIds = availableFrames.slice(0, MAX_FIGMA_IMAGES).map((f) => f.id);
+    }
+    exportIds = [...new Set(exportIds)].slice(0, MAX_FIGMA_IMAGES);
+
+    const uiSummary: string[] = [];
+    if (target) collectUiSummary(target, 0, 8, uiSummary);
 
     const images: string[] = [];
+    const frameImageMap: Record<string, string> = {};
     let imageNote = '';
 
-    if (imageNodeIds.length > 0) {
-      const idsParam = imageNodeIds.slice(0, MAX_FIGMA_IMAGES).join(',');
+    if (exportIds.length > 0) {
       const tryExport = async (scale: number) => {
         const imagesUrl =
           `https://api.figma.com/v1/images/${parsed.fileKey}` +
-          `?ids=${encodeURIComponent(idsParam)}&format=png&scale=${scale}`;
+          `?ids=${encodeURIComponent(exportIds.join(','))}&format=png&scale=${scale}`;
         const imgRes = await figmaFetch(imagesUrl, token, 90_000);
         if (!imgRes.ok) {
           if (isFigmaRateLimit(imgRes)) {
             throw new SourceServiceError(429, 'Rate Limited', figmaRateLimitMessage());
           }
           const detail = await imgRes.text().catch(() => '');
-          return { urls: [] as string[], err: `Image export failed (${imgRes.status}): ${detail.slice(0, 150)}` };
+          return { map: {} as Record<string, string>, err: `Image export failed (${imgRes.status}): ${detail.slice(0, 150)}` };
         }
         const imgJson = await imgRes.json() as {
           err?: string;
           images?: Record<string, string | null>;
         };
-        if (imgJson.err) return { urls: [] as string[], err: imgJson.err };
-        return {
-          urls: Object.values(imgJson.images || {}).filter((u): u is string => Boolean(u)),
-        };
+        if (imgJson.err) return { map: {} as Record<string, string>, err: imgJson.err };
+        const map: Record<string, string> = {};
+        for (const [id, url] of Object.entries(imgJson.images || {})) {
+          if (url) map[id] = url;
+        }
+        return { map };
       };
 
       let exportResult = await tryExport(FIGMA_EXPORT_SCALE);
-      let dataUrls: string[] = [];
-      for (const u of exportResult.urls.slice(0, MAX_FIGMA_IMAGES)) {
-        const dataUrl = await imageUrlToDataUrl(u);
-        if (dataUrl) dataUrls.push(dataUrl);
+      const dataById: Record<string, string> = {};
+
+      for (const [id, url] of Object.entries(exportResult.map)) {
+        const dataUrl = await imageUrlToDataUrl(url);
+        if (dataUrl) dataById[id] = dataUrl;
       }
 
-      if (exportResult.urls.length > 0 && dataUrls.length === 0 && FIGMA_EXPORT_SCALE > 1) {
+      if (Object.keys(exportResult.map).length > 0 && Object.keys(dataById).length === 0 && FIGMA_EXPORT_SCALE > 1) {
         exportResult = await tryExport(1);
-        for (const u of exportResult.urls.slice(0, MAX_FIGMA_IMAGES)) {
-          const dataUrl = await imageUrlToDataUrl(u);
-          if (dataUrl) dataUrls.push(dataUrl);
+        for (const [id, url] of Object.entries(exportResult.map)) {
+          const dataUrl = await imageUrlToDataUrl(url);
+          if (dataUrl) dataById[id] = dataUrl;
         }
-        if (dataUrls.length > 0) {
+        if (Object.keys(dataById).length > 0) {
           imageNote = 'Used scale=1 export because higher-res images exceeded size limits.';
         }
       }
 
-      images.push(...dataUrls);
+      for (const id of exportIds) {
+        const dataUrl = dataById[id];
+        if (dataUrl) {
+          images.push(dataUrl);
+          frameImageMap[id] = dataUrl;
+        }
+      }
+
       if (exportResult.err && images.length === 0) imageNote = exportResult.err;
-      else if (exportResult.urls.length > 0 && images.length === 0) {
+      else if (Object.keys(exportResult.map).length > 0 && images.length === 0) {
         imageNote = 'Figma returned image URLs but downloading/encoding them failed.';
       }
     }
 
+    const selectedSet = new Set(exportIds);
+    const frames = availableFrames.map((f) => ({
+      ...f,
+      selected: selectedSet.has(f.id),
+      ...(frameImageMap[f.id] ? { image: frameImageMap[f.id] } : {}),
+    }));
+
     const textParts = [
       `File: ${fileName}`,
       `Focus: ${nodeLabel}`,
+      `Frames available: ${availableFrames.length}`,
+      `Frames exported: ${exportIds.length}`,
       '',
-      textLayers.length > 0
-        ? `Text layers:\n${textLayers.slice(0, 200).join('\n')}`
-        : 'No text layers extracted from the selected node (screenshot may still be attached).',
+      availableFrames.length > 0
+        ? `Frame list:\n${availableFrames.map((f) => `- ${f.name} [${f.type}] (${f.id})${selectedSet.has(f.id) ? ' ✓' : ''}`).join('\n')}`
+        : '',
+      '',
+      uiSummary.length > 0
+        ? `UI structure & text:\n${uiSummary.join('\n')}`
+        : 'No UI text extracted from the selected node.',
       images.length > 0 ? `\n(${images.length} design screenshot(s) attached as images)` : '',
       imageNote ? `\n${imageNote}` : '',
     ];
@@ -226,6 +309,7 @@ export async function fetchFigmaContent(
       url: parsed.originalUrl,
       text: truncateText(textParts.join('\n')),
       ...(images.length > 0 ? { images } : {}),
+      frames,
     };
   } catch (err) {
     if (err instanceof SourceServiceError) throw err;

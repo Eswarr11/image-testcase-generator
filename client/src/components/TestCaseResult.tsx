@@ -1,219 +1,135 @@
-import { Check, Copy, Download, FileText, Loader2 } from 'lucide-react'
-import { useState } from 'react'
+import { Check, Copy, Download, FileText, Loader2, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useToast } from '../contexts/ToastContext'
+import type { StructuredTestCase } from '../types'
+import {
+  downloadBlob,
+  structuredCasesToCsv,
+  structuredCasesToSpreadsheetMl,
+} from '../utils/exportCases'
 
 interface TestCaseResultProps {
-  result: string | null
+  testCases: StructuredTestCase[] | null
+  markdown: string | null
   isGenerating: boolean
+  onTestCasesChange: (cases: StructuredTestCase[]) => void
 }
 
-export default function TestCaseResult({ result, isGenerating }: TestCaseResultProps) {
+type ViewMode = 'edit' | 'markdown'
+
+function listToText(items: string[]): string {
+  return items.join('\n')
+}
+
+function textToList(value: string): string[] {
+  return value
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
+}
+
+export default function TestCaseResult({
+  testCases,
+  markdown,
+  isGenerating,
+  onTestCasesChange,
+}: TestCaseResultProps) {
   const { showToast } = useToast()
   const [copied, setCopied] = useState(false)
+  const [view, setView] = useState<ViewMode>('edit')
+  const [localCases, setLocalCases] = useState<StructuredTestCase[]>([])
 
-  const copyToClipboard = async () => {
-    if (!result) return
+  useEffect(() => {
+    setLocalCases(testCases || [])
+  }, [testCases])
 
+  const updateCase = (index: number, patch: Partial<StructuredTestCase>) => {
+    const next = localCases.map((tc, i) => (i === index ? { ...tc, ...patch } : tc))
+    setLocalCases(next)
+    onTestCasesChange(next)
+  }
+
+  const removeCase = (index: number) => {
+    const next = localCases.filter((_, i) => i !== index)
+    setLocalCases(next)
+    onTestCasesChange(next)
+  }
+
+  const copyMarkdown = async () => {
+    const text = markdown || ''
+    if (!text) return
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(result)
-        setCopied(true)
-        showToast('Test case copied to clipboard!', 'success')
-        setTimeout(() => setCopied(false), 2000)
-      } else {
-        // Fallback for older browsers or non-HTTPS
-        const textArea = document.createElement('textarea')
-        textArea.value = result
-        textArea.style.position = 'fixed'
-        textArea.style.left = '-999999px'
-        textArea.style.top = '-999999px'
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-
-        const copied = document.execCommand('copy')
-        document.body.removeChild(textArea)
-
-        if (copied) {
-          setCopied(true)
-          showToast('Test case copied to clipboard!', 'success')
-          setTimeout(() => setCopied(false), 2000)
-        } else {
-          throw new Error('Copy command failed')
-        }
-      }
-    } catch (error) {
-      console.error('Error copying to clipboard:', error)
-      showToast('Failed to copy to clipboard', 'error')
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      showToast('Markdown copied to clipboard', 'success')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      showToast('Failed to copy', 'error')
     }
   }
 
-  const parseTestCaseContent = (content: string) => {
-    const testCases: Array<{
-      id: string
-      summary: string
-      priority: string
-      description: string
-      tags: string
-      precondition: string
-      testSteps: string
-      expectedResult: string
-    }> = []
+  const timestamp = () => new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
 
-    // Split content by test case sections (markdown headers or separators)
-    const sections = content.split(/(?:---|\n##|\n# Test Case)/);
-    
-    sections.forEach((section, index) => {
-      if (!section.trim() || section.includes('# Test Cases for')) return
-
-      // Extract fields using regex patterns
-      const extractField = (pattern: RegExp): string => {
-        const match = section.match(pattern)
-        return match && match[1] ? match[1].trim().replace(/"/g, '""') : ''
-      }
-
-      const id = extractField(/\*\*Test Case ID:\*\*\s*(.+?)(?:\s*\*\*|\n|$)/i) || `TC-${String(index).padStart(3, '0')}`
-      const summary = extractField(/\*\*Test Case Title:\*\*\s*(.+?)(?:\s*\*\*|\n|$)/i)
-      const priority = extractField(/\*\*Priority Level:\*\*\s*(.+?)(?:\s*\*\*|\n|$)/i) || 'Medium'
-      const description = extractField(/\*\*Description:\*\*\s*(.+?)(?:\s*\*\*|\n\n)/is)
-      const regressionCandidate = extractField(/\*\*Regression Candidate:\*\*\s*(.+?)(?:\s*\*\*|\n|$)/i)
-      
-      // Extract pre-conditions (handle both bullet points and plain text)
-      let precondition = ''
-      const preMatch = section.match(/\*\*Pre-conditions:\*\*\s*([\s\S]*?)(?:\*\*|$)/i)
-      if (preMatch && preMatch[1]) {
-        precondition = preMatch[1]
-          .replace(/^[\s-•]+/gm, '')
-          .replace(/\n+/g, '; ')
-          .trim()
-          .replace(/"/g, '""')
-      }
-
-      // Extract test steps (handle numbered lists)
-      let testSteps = ''
-      const stepsMatch = section.match(/\*\*Test Steps:\*\*\s*([\s\S]*?)(?:\*\*|$)/i)
-      if (stepsMatch && stepsMatch[1]) {
-        testSteps = stepsMatch[1]
-          .replace(/^\d+\.\s*/gm, '')
-          .replace(/^[\s-•]+/gm, '')
-          .replace(/\n+/g, '; ')
-          .trim()
-          .replace(/"/g, '""')
-      }
-
-      // Extract expected results (handle bullet points)
-      let expectedResult = ''
-      const resultsMatch = section.match(/\*\*Expected Results?:\*\*\s*([\s\S]*?)(?:\*\*|$)/i)
-      if (resultsMatch && resultsMatch[1]) {
-        expectedResult = resultsMatch[1]
-          .replace(/^[\s-•]+/gm, '')
-          .replace(/\n+/g, '; ')
-          .trim()
-          .replace(/"/g, '""')
-      }
-
-      // Determine tags based on regression candidate status
-      const tags = regressionCandidate && regressionCandidate.toLowerCase().includes('yes') 
-        ? 'Regression_candidate' 
-        : ''
-
-      // Only add if we have meaningful content
-      if (summary || description || testSteps || expectedResult) {
-        testCases.push({
-          id,
-          summary,
-          priority,
-          description,
-          tags,
-          precondition,
-          testSteps,
-          expectedResult
-        })
-      }
-    })
-
-    return testCases
+  const exportCsv = () => {
+    if (!localCases.length) {
+      showToast('No test cases to export', 'warning')
+      return
+    }
+    const csv = structuredCasesToCsv(localCases)
+    downloadBlob(csv, `test_cases_${timestamp()}.csv`, 'text/csv;charset=utf-8')
+    showToast(`${localCases.length} cases exported as CSV`, 'success')
   }
 
-  const exportToCSV = () => {
-    if (!result) return
-
-    try {
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
-      const filename = `test_cases_${timestamp}.csv`
-
-      // Parse the test case content
-      const testCases = parseTestCaseContent(result)
-
-      if (testCases.length === 0) {
-        showToast('No test cases found to export', 'warning')
-        return
-      }
-
-      // Create CSV header matching the original format
-      const csvHeader = 'Existing Testcase ID,Summary,Priority,Description,Tags,Precondition,Test Steps,Expected Result\n'
-      
-      // Create CSV rows
-      const csvRows = testCases.map(tc => 
-        `"${tc.id}","${tc.summary}","${tc.priority}","${tc.description}","${tc.tags}","${tc.precondition}","${tc.testSteps}","${tc.expectedResult}"`
-      ).join('\n')
-
-      const csvContent = csvHeader + csvRows
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' })
-      const url = URL.createObjectURL(blob)
-
-      const a = document.createElement('a')
-      a.href = url
-      a.download = filename
-      a.style.display = 'none'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-
-      showToast(`${testCases.length} test cases exported as ${filename}`, 'success')
-    } catch (error) {
-      console.error('Error exporting CSV:', error)
-      showToast('Error exporting CSV: ' + (error as Error).message, 'error')
+  const exportXlsx = () => {
+    if (!localCases.length) {
+      showToast('No test cases to export', 'warning')
+      return
     }
+    const xml = structuredCasesToSpreadsheetMl(localCases)
+    downloadBlob(xml, `test_cases_${timestamp()}.xls`, 'application/vnd.ms-excel')
+    showToast(`${localCases.length} cases exported as Excel`, 'success')
   }
 
   return (
     <div className="card p-6 animate-slide-up">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
         <div className="flex items-center space-x-2">
           <FileText className="w-5 h-5 text-primary-600" />
-          <h3 className="text-lg font-semibold">Generated Test Case</h3>
+          <h3 className="text-lg font-semibold">Generated Test Cases</h3>
+          {localCases.length > 0 && (
+            <span className="text-xs text-gray-500">{localCases.length} cases</span>
+          )}
         </div>
-        
-        {result && (
-          <div className="flex space-x-2">
-            <button
-              onClick={copyToClipboard}
-              className="btn-secondary flex items-center space-x-2 text-sm"
-              title="Copy to clipboard"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-4 h-4 text-green-600" />
-                  <span>Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span>Copy</span>
-                </>
-              )}
+
+        {localCases.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <div className="flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
+              <button
+                type="button"
+                className={`px-3 py-1.5 text-sm ${view === 'edit' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700'}`}
+                onClick={() => setView('edit')}
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                className={`px-3 py-1.5 text-sm ${view === 'markdown' ? 'bg-primary-600 text-white' : 'bg-gray-100 dark:bg-gray-700'}`}
+                onClick={() => setView('markdown')}
+              >
+                Markdown
+              </button>
+            </div>
+            <button type="button" onClick={copyMarkdown} className="btn-secondary flex items-center space-x-2 text-sm">
+              {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+              <span>{copied ? 'Copied' : 'Copy MD'}</span>
             </button>
-            
-            <button
-              onClick={exportToCSV}
-              className="btn-secondary flex items-center space-x-2 text-sm"
-              title="Export as CSV"
-            >
+            <button type="button" onClick={exportCsv} className="btn-secondary flex items-center space-x-2 text-sm">
               <Download className="w-4 h-4" />
               <span>CSV</span>
+            </button>
+            <button type="button" onClick={exportXlsx} className="btn-secondary flex items-center space-x-2 text-sm">
+              <Download className="w-4 h-4" />
+              <span>Excel</span>
             </button>
           </div>
         )}
@@ -224,19 +140,113 @@ export default function TestCaseResult({ result, isGenerating }: TestCaseResultP
           <div className="flex flex-col items-center justify-center py-12 space-y-4">
             <Loader2 className="w-8 h-8 animate-spin text-primary-600" />
             <p className="text-gray-600 dark:text-gray-400">
-              Generating your test case... This may take a few moments.
+              Generating structured test cases…
             </p>
           </div>
-        ) : result ? (
-          <div className="prose prose-sm dark:prose-invert max-w-none">
+        ) : localCases.length > 0 ? (
+          view === 'markdown' ? (
             <pre className="whitespace-pre-wrap font-mono text-sm leading-relaxed">
-              {result}
+              {markdown}
             </pre>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              {localCases.map((tc, index) => (
+                <div
+                  key={`${tc.id}-${index}`}
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4 space-y-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1">
+                      <input
+                        className="input-field text-sm"
+                        value={tc.id}
+                        onChange={(e) => updateCase(index, { id: e.target.value })}
+                        placeholder="TC-001"
+                      />
+                      <input
+                        className="input-field text-sm sm:col-span-2"
+                        value={tc.title}
+                        onChange={(e) => updateCase(index, { title: e.target.value })}
+                        placeholder="Title"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-secondary p-2"
+                      title="Delete case"
+                      onClick={() => removeCase(index)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <textarea
+                    className="input-field text-sm min-h-[60px]"
+                    value={tc.description}
+                    onChange={(e) => updateCase(index, { description: e.target.value })}
+                    placeholder="Description"
+                  />
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="text-xs space-y-1">
+                      <span className="font-medium">Priority</span>
+                      <select
+                        className="input-field text-sm"
+                        value={tc.priority}
+                        onChange={(e) => updateCase(index, { priority: e.target.value })}
+                      >
+                        {['Critical', 'High', 'Medium', 'Low'].map((p) => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="text-xs space-y-1">
+                      <span className="font-medium">Regression</span>
+                      <select
+                        className="input-field text-sm"
+                        value={tc.regression}
+                        onChange={(e) => updateCase(index, { regression: e.target.value })}
+                      >
+                        <option value="YES">YES</option>
+                        <option value="NO">NO</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  {(
+                    [
+                      ['preconditions', 'Preconditions (one per line)'],
+                      ['steps', 'Steps (one per line)'],
+                      ['expected', 'Expected results (one per line)'],
+                      ['testData', 'Test data (one per line)'],
+                      ['postconditions', 'Post-conditions (one per line)'],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="block text-xs space-y-1">
+                      <span className="font-medium">{label}</span>
+                      <textarea
+                        className="input-field text-sm min-h-[72px] font-mono"
+                        value={listToText(tc[key])}
+                        onChange={(e) =>
+                          updateCase(index, { [key]: textToList(e.target.value) })
+                        }
+                      />
+                    </label>
+                  ))}
+
+                  {tc.coversRequirements && tc.coversRequirements.length > 0 && (
+                    <p className="text-xs text-gray-500">
+                      Covers: {tc.coversRequirements.join(', ')}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )
         ) : (
           <div className="flex items-center justify-center py-12">
             <p className="text-gray-500 dark:text-gray-400">
-              Your generated test case will appear here.
+              Your generated test cases will appear here.
             </p>
           </div>
         )}

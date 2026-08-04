@@ -1,4 +1,8 @@
-import type { AtlassianCredentials, SourceFetchResult } from '../types'
+import type {
+  AtlassianCredentials,
+  GenerateResponse,
+  SourceFetchResult,
+} from '../types'
 
 export interface SessionStatus {
   openai: boolean
@@ -59,12 +63,18 @@ export async function fetchConfluencePage(pageUrl: string): Promise<SourceFetchR
   return res.json() as Promise<SourceFetchResult>
 }
 
-export async function fetchFigmaDesign(figmaUrl: string): Promise<SourceFetchResult> {
+export async function fetchFigmaDesign(
+  figmaUrl: string,
+  selectedFrameIds?: string[]
+): Promise<SourceFetchResult> {
   const res = await fetch('/api/sources/figma', {
     method: 'POST',
     credentials: 'include',
     headers: jsonHeaders,
-    body: JSON.stringify({ figmaUrl }),
+    body: JSON.stringify({
+      figmaUrl,
+      ...(selectedFrameIds && selectedFrameIds.length > 0 ? { selectedFrameIds } : {}),
+    }),
   })
   if (!res.ok) throw new Error(await parseError(res))
   return res.json() as Promise<SourceFetchResult>
@@ -75,7 +85,10 @@ export async function generateTestCase(payload: {
   confluenceUrls: string[]
   figmaUrls: string[]
   images?: string[]
-}): Promise<string> {
+  figmaFrameSelections?: Record<string, string[]>
+  uncoveredRequirementIds?: string[]
+  existingRequirements?: Array<{ id: string; text: string }>
+}): Promise<GenerateResponse> {
   const res = await fetch('/api/generate-test-case', {
     method: 'POST',
     credentials: 'include',
@@ -83,6 +96,5 @@ export async function generateTestCase(payload: {
     body: JSON.stringify(payload),
   })
   if (!res.ok) throw new Error(await parseError(res))
-  const data = await res.json() as { content: string }
-  return data.content
+  return res.json() as Promise<GenerateResponse>
 }

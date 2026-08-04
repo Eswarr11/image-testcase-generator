@@ -12,6 +12,13 @@ export interface SourceFetchResult {
   url: string;
   text: string;
   images?: string[];
+  frames?: Array<{
+    id: string;
+    name: string;
+    type: string;
+    selected?: boolean;
+    image?: string;
+  }>;
 }
 
 export class SourceServiceError extends Error {
