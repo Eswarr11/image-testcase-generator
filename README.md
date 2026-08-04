@@ -8,7 +8,8 @@ Generate comprehensive Jira-ready test cases from **Confluence documents** and *
 - Fetch page text and Figma screenshots via a local Express proxy
 - Generate structured Jira test cases with GPT-4o (server-side)
 - Optional focus prompt and manual image uploads
-- **Session vault:** secrets saved once to server memory (httpOnly cookie)
+- **Session vault:** secrets encrypted in SQLite (`data/testcase-generator.db`; Turso on Vercel) with httpOnly cookie id only
+- Confluence/Figma responses cached in SQLite to cut repeat upstream calls
 - Dark/light theme, CSV export, toast feedback
 
 ## Tech Stack

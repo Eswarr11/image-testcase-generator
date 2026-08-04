@@ -2,10 +2,10 @@ JIRA TEST CASE GENERATOR - SETUP
 ================================
 
 REQUIREMENTS:
-- Node.js 18+
+- Node.js 18+ (22.x recommended for Vercel)
 - OpenAI API Key
 - Atlassian API token (Confluence)
-- Figma Personal Access Token
+- Figma Personal Access Token (optional)
 
 INSTALLATION:
 1. cd image-testcase-generator
@@ -20,9 +20,27 @@ DEVELOPMENT:
   - Frontend: http://localhost:5173
 - npm run dev:backend / npm run dev:frontend
 
+DATABASE (sessions + source cache):
+- Local default: file SQLite at data/testcase-generator.db (auto-created)
+- Stores encrypted credential sessions (cookie id only in browser)
+- Caches Confluence/Figma fetch results (TTL ~1h / 30m)
+- Optional env:
+  - SESSION_ENCRYPTION_KEY   # min 16 chars; set a strong secret in production
+  - DATABASE_URL             # override DB location / use Turso on Vercel
+  - TURSO_AUTH_TOKEN         # required when DATABASE_URL is a Turso libsql:// URL
+
+VERCEL:
+1. Create a free Turso database (https://turso.tech) for durable sessions across cold starts
+2. Set Vercel env:
+   - DATABASE_URL=libsql://<your-db>.turso.io
+   - TURSO_AUTH_TOKEN=<token>
+   - SESSION_ENCRYPTION_KEY=<long-random-secret>
+3. Without Turso, the app falls back to file:/tmp/testcase-generator.db (ephemeral per instance)
+
 ARCHITECTURE (Thrive-style split):
 - backend/src/modules/{session,sources,generate,health}/
   - core/controllers, core/services, core/repositories, dto
+- backend/src/db/  # libsql client, migrate, crypto, source-cache
 - frontend/src/features/{credentials,sources,generate,results}/
 - frontend/src/commons/{components,context,services,types,utils}
 

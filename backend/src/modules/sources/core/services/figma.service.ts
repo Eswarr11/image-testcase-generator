@@ -5,6 +5,12 @@ import { figmaFetch, figmaRateLimitMessage, isFigmaRateLimit } from '../../../..
 import { SourceFetchResult } from './confluence.service';
 import { SourceServiceError } from '../../../../exceptions/SourceServiceError';
 import { logger } from '../../../../logger/logger';
+import {
+  authFingerprint,
+  buildSourceCacheKey,
+  getCachedSource,
+  setCachedSource,
+} from '../../../../db/source-cache';
 
 const MAX_FIGMA_IMAGES = 8;
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
@@ -140,6 +146,31 @@ function throwFigmaHttp(status: number, detail: string, context: string): never 
 }
 
 export async function fetchFigmaContent(
+  figmaUrl: string,
+  accessToken: string,
+  options: FigmaFetchOptions = {}
+): Promise<SourceFetchResult> {
+  const fingerprint = authFingerprint([accessToken.trim()]);
+  const cacheKey = buildSourceCacheKey(
+    'figma',
+    figmaUrl,
+    fingerprint,
+    options.selectedFrameIds
+  );
+
+  const cached = await getCachedSource<SourceFetchResult>(cacheKey);
+  if (cached) {
+    logger.info('source_cache_hit', { kind: 'figma' });
+    return cached;
+  }
+
+  logger.info('source_cache_miss', { kind: 'figma' });
+  const result = await fetchFigmaContentUncached(figmaUrl, accessToken, options);
+  await setCachedSource(cacheKey, 'figma', result);
+  return result;
+}
+
+async function fetchFigmaContentUncached(
   figmaUrl: string,
   accessToken: string,
   options: FigmaFetchOptions = {}

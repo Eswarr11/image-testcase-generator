@@ -18,6 +18,7 @@
     "node": "22.x"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.4",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",

@@ -32,7 +32,7 @@ function readCookieSessionId(req: Request): string | undefined {
 router.post(
   '/',
   asyncHandler(async (req: Request, res: Response<GenerateResponse>) => {
-    const session = getSession(readCookieSessionId(req));
+    const session = await getSession(readCookieSessionId(req));
     if (!session?.openai?.trim()) {
       throw new AppError(
         401,

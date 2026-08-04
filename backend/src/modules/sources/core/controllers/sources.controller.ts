@@ -15,8 +15,8 @@ function readCookieSessionId(req: Request): string | undefined {
   return cookies?.[SESSION_COOKIE];
 }
 
-function requireSession(req: Request) {
-  const session = getSession(readCookieSessionId(req));
+async function requireSession(req: Request) {
+  const session = await getSession(readCookieSessionId(req));
   if (!session) {
     throw new AppError(
       401,
@@ -31,7 +31,7 @@ function requireSession(req: Request) {
 router.post(
   '/validate-atlassian',
   asyncHandler(async (req: Request, res: Response) => {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session.atlassian) {
       throw new AppError(
         401,
@@ -62,7 +62,7 @@ router.post(
 router.post(
   '/validate-figma',
   asyncHandler(async (req: Request, res: Response) => {
-    const session = requireSession(req);
+    const session = await requireSession(req);
     if (!session.figma?.accessToken) {
       throw new AppError(
         401,
@@ -91,7 +91,7 @@ router.post(
   '/confluence',
   asyncHandler(async (req: Request, res: Response) => {
     try {
-      const session = requireSession(req);
+      const session = await requireSession(req);
       if (!session.atlassian) {
         throw new AppError(
           401,
@@ -129,7 +129,7 @@ router.post(
   '/figma',
   asyncHandler(async (req: Request, res: Response) => {
     try {
-      const session = requireSession(req);
+      const session = await requireSession(req);
       if (!session.figma?.accessToken) {
         throw new AppError(
           401,

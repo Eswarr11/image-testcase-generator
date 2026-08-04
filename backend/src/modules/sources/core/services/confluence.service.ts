@@ -7,6 +7,12 @@ import { parseConfluenceUrl } from '../../../../utils/urlParsers';
 import { htmlToPlainText, truncateText } from '../../../../utils/textExtract';
 import { SourceServiceError } from '../../../../exceptions/SourceServiceError';
 import { logger } from '../../../../logger/logger';
+import {
+  authFingerprint,
+  buildSourceCacheKey,
+  getCachedSource,
+  setCachedSource,
+} from '../../../../db/source-cache';
 
 export interface SourceFetchResult {
   source: 'confluence' | 'figma';
@@ -23,7 +29,7 @@ export interface SourceFetchResult {
   }>;
 }
 
-export async function fetchConfluenceContent(
+async function fetchConfluenceContentUncached(
   pageUrl: string,
   auth: AtlassianAuth
 ): Promise<SourceFetchResult> {
@@ -116,4 +122,23 @@ export async function fetchConfluenceContent(
     url: canonical || parsed.originalUrl,
     text: truncateText(parts.join('\n')),
   };
+}
+
+export async function fetchConfluenceContent(
+  pageUrl: string,
+  auth: AtlassianAuth
+): Promise<SourceFetchResult> {
+  const fingerprint = authFingerprint([auth.siteUrl, auth.email, auth.token]);
+  const cacheKey = buildSourceCacheKey('confluence', pageUrl, fingerprint);
+
+  const cached = await getCachedSource<SourceFetchResult>(cacheKey);
+  if (cached) {
+    logger.info('source_cache_hit', { kind: 'confluence' });
+    return cached;
+  }
+
+  logger.info('source_cache_miss', { kind: 'confluence' });
+  const result = await fetchConfluenceContentUncached(pageUrl, auth);
+  await setCachedSource(cacheKey, 'confluence', result);
+  return result;
 }

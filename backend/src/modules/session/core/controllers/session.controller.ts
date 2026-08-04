@@ -28,17 +28,23 @@ function readCookieSessionId(req: Request): string | undefined {
   return cookies?.[SESSION_COOKIE];
 }
 
-router.get('/status', (req: Request, res: Response) => {
-  const record = getSession(readCookieSessionId(req));
-  return res.json(sessionStatus(record));
-});
+router.get(
+  '/status',
+  asyncHandler(async (req: Request, res: Response) => {
+    const record = await getSession(readCookieSessionId(req));
+    return res.json(sessionStatus(record));
+  })
+);
 
-router.delete('/', (req: Request, res: Response) => {
-  logger.info('session_clear');
-  clearSession(readCookieSessionId(req));
-  clearSessionCookie(res);
-  return res.json({ ok: true });
-});
+router.delete(
+  '/',
+  asyncHandler(async (req: Request, res: Response) => {
+    logger.info('session_clear');
+    await clearSession(readCookieSessionId(req));
+    clearSessionCookie(res);
+    return res.json({ ok: true });
+  })
+);
 
 /**
  * Save credentials into the server session vault (secrets appear only on this request).
@@ -62,13 +68,13 @@ router.post(
 
     logger.info('credentials_save_start', { providers });
 
-    const { id } = ensureSession(readCookieSessionId(req));
+    const { id } = await ensureSession(readCookieSessionId(req));
 
     try {
       // OpenAI
       if (body.openai !== undefined) {
         if (body.openai === null || body.openai === '') {
-          updateSession(id, { openai: null });
+          await updateSession(id, { openai: null });
           logger.info('credentials_cleared', { provider: 'openai' });
         } else {
           const key = body.openai.trim();
@@ -87,7 +93,7 @@ router.post(
               fields: { provider: 'openai', reason: 'rejected', status: probe.status },
             });
           }
-          updateSession(id, { openai: key });
+          await updateSession(id, { openai: key });
           logger.info('credentials_saved', { provider: 'openai' });
         }
       }
@@ -95,7 +101,7 @@ router.post(
       // Atlassian
       if (body.atlassian !== undefined) {
         if (body.atlassian === null) {
-          updateSession(id, { atlassian: null });
+          await updateSession(id, { atlassian: null });
           logger.info('credentials_cleared', { provider: 'atlassian' });
         } else {
           const siteUrl = normalizeSiteUrl(String(body.atlassian.siteUrl || ''));
@@ -119,7 +125,7 @@ router.post(
               fields: { provider: 'atlassian', reason: 'auth_failed' },
             });
           }
-          updateSession(id, {
+          await updateSession(id, {
             atlassian: { siteUrl, email, apiToken },
           });
           logger.info('credentials_saved', {
@@ -132,7 +138,7 @@ router.post(
       // Figma
       if (body.figma !== undefined) {
         if (body.figma === null) {
-          updateSession(id, { figma: null });
+          await updateSession(id, { figma: null });
           logger.info('credentials_cleared', { provider: 'figma' });
         } else {
           const accessToken = String(body.figma.accessToken || '').trim();
@@ -149,13 +155,13 @@ router.post(
               fields: { provider: 'figma', reason: 'rejected', status: me.status },
             });
           }
-          updateSession(id, { figma: { accessToken } });
+          await updateSession(id, { figma: { accessToken } });
           logger.info('credentials_saved', { provider: 'figma' });
         }
       }
 
       setSessionCookie(res, id);
-      const updated = getSession(id);
+      const updated = await getSession(id);
       logger.info('credentials_save_success', { providers });
       return res.json(sessionStatus(updated));
     } catch (err) {

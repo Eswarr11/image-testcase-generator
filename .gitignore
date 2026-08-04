@@ -41,6 +41,10 @@ Thumbs.db
 # Backend structured logs
 backend/logs/
 
+# Local SQLite (sessions + source cache)
+data/*.db
+data/*.db-*
+
 # Leftover rename backups from restructure
 _stale_*/
 

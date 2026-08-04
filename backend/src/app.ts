@@ -5,6 +5,8 @@ import cookieParser from 'cookie-parser';
 import { corsMiddleware } from './config/cors';
 import { env, isDevelopment, isVercel } from './config/env';
 import { helmetMiddleware } from './config/helmet';
+import { migrateDb } from './db/client';
+import { logger } from './logger/logger';
 import { traceMiddleware } from './logger/trace.middleware';
 import { errorHandler } from './middleware/errorHandler.middleware';
 import { apiNotFound } from './middleware/notFound.middleware';
@@ -18,8 +20,28 @@ function shouldServeFrontend(): boolean {
   return !isDevelopment && !isVercel;
 }
 
+let bootPromise: Promise<void> | null = null;
+
+async function ensureBootstrapped(): Promise<void> {
+  if (!bootPromise) {
+    bootPromise = migrateDb().catch((err) => {
+      bootPromise = null;
+      logger.error('db_migrate_fail', { message: (err as Error).message });
+      throw err;
+    });
+  }
+  await bootPromise;
+}
+
 export function createApp(): Application {
   const app = express();
+
+  // Ensure DB schema before handling requests (local + Vercel)
+  app.use((req, res, next) => {
+    void ensureBootstrapped()
+      .then(() => next())
+      .catch(next);
+  });
 
   app.use(helmetMiddleware);
   app.use(compression());
