@@ -10,12 +10,12 @@ import { errorHandler } from './middleware/errorHandler.middleware';
 import { apiNotFound } from './middleware/notFound.middleware';
 import { mountRoutes } from './modules';
 
-function frontendRoot(): string {
-  // Build copies Vite output to /public for Vercel CDN + serverless fallback
-  if (isVercel) {
-    return path.join(process.cwd(), 'public');
-  }
-  return env.frontendDist;
+/**
+ * On Vercel, static UI is served from `outputDirectory` (CDN).
+ * Express must only handle /api/* — never SPA catch-all or static assets.
+ */
+function shouldServeFrontend(): boolean {
+  return !isDevelopment && !isVercel;
 }
 
 export function createApp(): Application {
@@ -29,8 +29,8 @@ export function createApp(): Application {
   app.use(cookieParser());
   app.use(traceMiddleware);
 
-  if (!isDevelopment) {
-    app.use(express.static(frontendRoot(), {
+  if (shouldServeFrontend()) {
+    app.use(express.static(env.frontendDist, {
       maxAge: '1d',
       etag: true,
       lastModified: true,
@@ -41,9 +41,9 @@ export function createApp(): Application {
 
   app.use('/api/*', apiNotFound);
 
-  if (!isDevelopment) {
+  if (shouldServeFrontend()) {
     app.get('*', (_req: Request, res: Response) => {
-      res.sendFile(path.join(frontendRoot(), 'index.html'));
+      res.sendFile(path.join(env.frontendDist, 'index.html'));
     });
   }
 
