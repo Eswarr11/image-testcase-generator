@@ -1,7 +1,9 @@
-/**
- * Vercel Express entrypoint (must be named server/app/index at repo root or src/).
- * Built backend is required so local `npm start` path stays unchanged.
- */
+const express = require('express');
 const { createApp } = require('./backend/dist/app');
 
-module.exports = createApp();
+// Reference express so the import is retained (Vercel entry detection).
+const app = createApp();
+app.set('trust proxy', 1);
+void express;
+
+module.exports = app;
