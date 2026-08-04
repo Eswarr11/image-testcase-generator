@@ -1,72 +1,31 @@
 {
-  "name": "jira-test-case-generator-web",
+  "name": "jira-test-case-generator",
   "version": "2.0.0",
-  "description": "Generate Jira test cases from Confluence documents and Figma designs using OpenAI GPT-4o.",
-  "main": "dist/server.js",
-  "type": "commonjs",
-  "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "tsx watch src/server.ts",
-    "dev:client": "cd client && npm run dev",
-    "build": "npm run build:server && npm run build:client",
-    "build:server": "tsc",
-    "build:client": "cd client && npm run build",
-    "start": "NODE_ENV=production node dist/server.js",
-    "clean": "rm -rf dist && cd client && rm -rf dist",
-    "lint": "eslint src/**/*.ts && cd client && npm run lint",
-    "lint:fix": "eslint src/**/*.ts --fix && cd client && npm run lint:fix",
-    "type-check": "tsc --noEmit && cd client && npm run type-check",
-    "test": "echo 'Tests not yet configured'",
-    "postinstall": "cd client && npm install"
-  },
-  "keywords": [
-    "typescript",
-    "react",
-    "tailwind",
-    "web-application",
-    "jira",
-    "test-cases",
-    "openai",
-    "gpt-4o",
-    "qa",
-    "testing",
-    "automation",
-    "ai-powered",
-    "image-analysis",
-    "quality-assurance",
-    "webapp"
+  "private": true,
+  "description": "Generate Jira test cases from Confluence and Figma using OpenAI GPT-4o",
+  "workspaces": [
+    "backend",
+    "frontend"
   ],
-  "author": "Eswar A",
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Eswarr11/image-testcase-generator.git"
+  "scripts": {
+    "dev": "concurrently -n backend,frontend -c blue,green \"npm run dev -w backend\" \"npm run dev -w frontend\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "build:backend": "npm run build -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "start": "npm run start -w backend",
+    "clean": "npm run clean -w backend && npm run clean -w frontend --if-present",
+    "lint": "npm run lint -w backend && npm run lint -w frontend",
+    "lint:fix": "npm run lint:fix -w backend && npm run lint:fix -w frontend",
+    "type-check": "npm run type-check -w backend && npm run type-check -w frontend",
+    "test": "npm run test -w backend --if-present"
   },
-  "bugs": {
-    "url": "https://github.com/Eswarr11/image-testcase-generator/issues"
-  },
-  "homepage": "https://github.com/Eswarr11/image-testcase-generator#readme",
   "engines": {
     "node": ">=18.0.0"
   },
-  "dependencies": {
-    "compression": "^1.7.4",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "express": "^4.19.2",
-    "helmet": "^7.1.0"
-  },
   "devDependencies": {
-    "@types/compression": "^1.7.5",
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.17",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.10.4",
-    "@typescript-eslint/eslint-plugin": "^6.13.2",
-    "@typescript-eslint/parser": "^6.13.2",
-    "concurrently": "^8.2.2",
-    "eslint": "^8.55.0",
-    "tsx": "^4.6.2",
-    "typescript": "^5.3.3"
-  }
+    "concurrently": "^8.2.2"
+  },
+  "license": "MIT"
 }

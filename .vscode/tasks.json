@@ -6,53 +6,26 @@
       "type": "shell",
       "command": "npm",
       "args": ["run", "dev"],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
+      "group": { "kind": "build", "isDefault": true },
       "problemMatcher": []
     },
     {
-      "label": "dev:server",
+      "label": "dev:backend",
       "type": "shell",
       "command": "npm",
-      "args": ["run", "dev:server"],
+      "args": ["run", "dev:backend"],
       "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
-      "problemMatcher": ["$tsc"],
-      "isBackground": true
+      "isBackground": true,
+      "problemMatcher": []
     },
     {
-      "label": "dev:client",
+      "label": "dev:frontend",
       "type": "shell",
       "command": "npm",
-      "args": ["run", "dev:client"],
+      "args": ["run", "dev:frontend"],
       "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
-      "problemMatcher": [],
-      "isBackground": true
+      "isBackground": true,
+      "problemMatcher": []
     },
     {
       "label": "build",
@@ -60,30 +33,14 @@
       "command": "npm",
       "args": ["run", "build"],
       "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
       "problemMatcher": ["$tsc"]
     },
     {
-      "label": "build:server",
+      "label": "build:backend",
       "type": "shell",
       "command": "npm",
-      "args": ["run", "build:server"],
+      "args": ["run", "build:backend"],
       "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
       "problemMatcher": ["$tsc"]
     },
     {
@@ -92,31 +49,7 @@
       "command": "npm",
       "args": ["run", "type-check"],
       "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
       "problemMatcher": ["$tsc"]
-    },
-    {
-      "label": "lint",
-      "type": "shell",
-      "command": "npm",
-      "args": ["run", "lint"],
-      "group": "build",
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": false,
-        "panel": "shared",
-        "showReuseMessage": true,
-        "clear": false
-      },
-      "problemMatcher": ["$eslint-stylish"]
     }
   ]
 }

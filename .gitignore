@@ -37,6 +37,12 @@ Thumbs.db
 *.temp
 *.log
 
+# Backend structured logs
+backend/logs/
+
+# Leftover rename backups from restructure
+_stale_*/
+
 # Chrome extension specific
 *.crx
 *.pem

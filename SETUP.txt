@@ -1,15 +1,15 @@
-JIRA TEST CASE GENERATOR - SETUP (Confluence + Figma → Test Cases)
-==================================================================
+JIRA TEST CASE GENERATOR - SETUP
+================================
 
 REQUIREMENTS:
-- Node.js 18.0.0 or higher
+- Node.js 18+
 - OpenAI API Key
-- Atlassian API token (for Confluence) — https://id.atlassian.com/manage-profile/security/api-tokens
-- Figma Personal Access Token — https://www.figma.com/developers/api#access-tokens
+- Atlassian API token (Confluence)
+- Figma Personal Access Token
 
 INSTALLATION:
 1. cd image-testcase-generator
-2. npm install
+2. npm install          # root workspaces: backend + frontend
 3. npm run build
 4. npm start
 5. Open http://localhost:3000
@@ -18,30 +18,18 @@ DEVELOPMENT:
 - npm run dev
   - Backend: http://localhost:3000
   - Frontend: http://localhost:5173
+- npm run dev:backend / npm run dev:frontend
 
-CREDENTIALS (server session vault):
-1. Open the Credentials panel in the UI
-2. Save OpenAI / Atlassian / Figma — secrets go to POST /api/session/credentials once
-3. Server stores them in memory and sets httpOnly cookie tcg_session
-4. Preview & Generate requests do NOT include tokens (only pageUrl / figmaUrl / prompt)
-5. Restarting the server clears the session — Save again
+ARCHITECTURE (Thrive-style split):
+- backend/src/modules/{session,sources,generate,health}/
+  - core/controllers, core/services, core/repositories, dto
+- frontend/src/features/{credentials,sources,generate,results}/
+- frontend/src/commons/{components,context,services,types,utils}
 
-USAGE:
-1. Paste one or more Confluence and/or Figma URLs
-2. Optionally Preview each link
-3. Optionally add a focus prompt or extra screenshots
-4. Click Generate Test Case
-5. Copy or export CSV
-
-URL FORMATS:
-- Confluence: .../wiki/spaces/SPACE/pages/{pageId}/Title  or  ?pageId=
-- Figma: https://www.figma.com/design/{fileKey}/...?node-id=1-2
-
-ARCHITECTURE:
-- Session vault: src/session/vault.ts (in-memory Map + cookie)
-- POST /api/session/credentials — only request that carries secrets
-- GET  /api/session/status — booleans only
-- DELETE /api/session — clear vault + cookie
-- POST /api/sources/confluence { pageUrl }
-- POST /api/sources/figma { figmaUrl }
-- POST /api/generate-test-case { prompt?, confluenceUrls[], figmaUrls[], images? }
+API:
+- GET  /api/health
+- POST /api/session/credentials
+- GET  /api/session/status
+- DELETE /api/session
+- POST /api/sources/confluence | /figma
+- POST /api/generate-test-case
