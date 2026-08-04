@@ -3,6 +3,10 @@ import path from 'path';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import sourcesRouter from './routes/sources';
+import sessionRouter from './routes/session';
+import generateRouter from './routes/generate';
 
 interface HealthResponse {
   status: 'OK' | 'ERROR';
@@ -38,7 +42,8 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://api.openai.com"],
+      // OpenAI is called from the server now; browser only talks to same origin
+      connectSrc: ["'self'"],
     },
   },
 }));
@@ -50,8 +55,9 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use(cookieParser());
 
 if (isDevelopment) {
   app.use((req: RequestWithTiming, res: Response, next: NextFunction) => {
@@ -88,12 +94,9 @@ app.get('/api/health', (req: Request, res: Response<HealthResponse>) => {
   });
 });
 
-app.post('/api/generate-test-case', (req: Request, res: Response<ApiError>) => {
-  res.status(501).json({
-    error: 'Not Implemented',
-    message: 'Server-side generation not implemented. Use client-side generation with your own API key.',
-  });
-});
+app.use('/api/session', sessionRouter);
+app.use('/api/sources', sourcesRouter);
+app.use('/api/generate-test-case', generateRouter);
 
 if (!isDevelopment) {
   app.get('*', (req: Request, res: Response) => {

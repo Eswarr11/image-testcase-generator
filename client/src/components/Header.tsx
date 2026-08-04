@@ -20,7 +20,7 @@ export default function Header() {
               Jira Test Case Generator
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              AI-powered test case generation with image analysis
+              Generate Jira test cases from Confluence docs and Figma designs
             </p>
           </div>
         </div>

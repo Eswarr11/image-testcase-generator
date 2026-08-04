@@ -69,3 +69,31 @@ export interface StorageData {
   settings?: AppSettings;
   history?: TestCaseResult[];
 }
+
+// Credentials Types
+export interface AtlassianCredentials {
+  siteUrl: string;
+  email: string;
+  apiToken: string;
+}
+
+export interface FigmaCredentials {
+  accessToken: string;
+}
+
+export interface Credentials {
+  openai: string | null;
+  atlassian: AtlassianCredentials | null;
+  figma: FigmaCredentials | null;
+}
+
+// Source fetch Types
+export type SourceKind = 'confluence' | 'figma';
+
+export interface SourceFetchResult {
+  source: SourceKind;
+  title: string;
+  url: string;
+  text: string;
+  images?: string[];
+}

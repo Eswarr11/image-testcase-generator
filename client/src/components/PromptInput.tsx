@@ -11,7 +11,7 @@ export default function PromptInput({ value, onChange, disabled }: PromptInputPr
     <div className="space-y-2">
       <label htmlFor="prompt" className="flex items-center space-x-2 text-sm font-medium">
         <MessageSquare className="w-4 h-4 text-primary-600" />
-        <span>Test Case Prompt</span>
+        <span>Focus prompt (optional)</span>
       </label>
       
       <textarea
@@ -19,13 +19,13 @@ export default function PromptInput({ value, onChange, disabled }: PromptInputPr
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        placeholder="Describe the functionality you want to test... For example: 'Test the login functionality with valid and invalid credentials' or 'Test the shopping cart checkout process'"
-        className="input-field min-h-[120px] resize-y"
-        rows={4}
+        placeholder="Optional: narrow the scope — e.g. 'Focus on login validation and error states' or 'Cover mobile breakpoints only'"
+        className="input-field min-h-[100px] resize-y"
+        rows={3}
       />
       
       <div className="text-xs text-gray-600 dark:text-gray-400">
-        <p>💡 <strong>Tip:</strong> Be specific about the functionality you want to test. Include details about user scenarios, edge cases, and any specific requirements.</p>
+        <p>Tip: Primary input is the Confluence + Figma links above. Use this to steer which scenarios to emphasize.</p>
       </div>
     </div>
   )
