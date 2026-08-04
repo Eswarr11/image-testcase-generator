@@ -3,12 +3,20 @@ import path from 'path';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { corsMiddleware } from './config/cors';
-import { env, isDevelopment } from './config/env';
+import { env, isDevelopment, isVercel } from './config/env';
 import { helmetMiddleware } from './config/helmet';
 import { traceMiddleware } from './logger/trace.middleware';
 import { errorHandler } from './middleware/errorHandler.middleware';
 import { apiNotFound } from './middleware/notFound.middleware';
 import { mountRoutes } from './modules';
+
+function frontendRoot(): string {
+  // Build copies Vite output to /public for Vercel CDN + serverless fallback
+  if (isVercel) {
+    return path.join(process.cwd(), 'public');
+  }
+  return env.frontendDist;
+}
 
 export function createApp(): Application {
   const app = express();
@@ -22,7 +30,7 @@ export function createApp(): Application {
   app.use(traceMiddleware);
 
   if (!isDevelopment) {
-    app.use(express.static(env.frontendDist, {
+    app.use(express.static(frontendRoot(), {
       maxAge: '1d',
       etag: true,
       lastModified: true,
@@ -35,7 +43,7 @@ export function createApp(): Application {
 
   if (!isDevelopment) {
     app.get('*', (_req: Request, res: Response) => {
-      res.sendFile(path.join(env.frontendDist, 'index.html'));
+      res.sendFile(path.join(frontendRoot(), 'index.html'));
     });
   }
 
