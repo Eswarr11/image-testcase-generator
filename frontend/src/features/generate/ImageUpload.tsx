@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useDropzone } from 'react-dropzone'
+import { useDropzone, type FileRejection } from 'react-dropzone'
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { UploadedFile } from '@/commons/types'
 import { useToast } from '@/commons/context/ToastContext'
@@ -11,7 +11,7 @@ interface ImageUploadProps {
 }
 
 const MAX_FILES = 9
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
 
 export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: ImageUploadProps) {
   const { showToast } = useToast()
@@ -46,7 +46,7 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
         }
 
         if (file.size > MAX_FILE_SIZE) {
-          showToast(`File ${file.name} is too large. Maximum size is 10MB.`, 'error')
+          showToast(`File ${file.name} is too large. Maximum size is 50MB.`, 'error')
           continue
         }
 
@@ -70,10 +70,28 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
     }
   }, [uploadedFiles, onFilesChange, showToast, isProcessing])
 
+  const onDropRejected = useCallback((fileRejections: FileRejection[]) => {
+    for (const rejection of fileRejections) {
+      const isTypeError = rejection.errors.some((e) => e.code === 'file-invalid-type')
+      if (isTypeError) {
+        showToast(
+          `File ${rejection.file.name} is not a supported image type. Use PNG, JPG, JPEG, GIF, or WebP.`,
+          'error'
+        )
+      } else {
+        showToast(`Could not upload ${rejection.file.name}`, 'error')
+      }
+    }
+  }, [showToast])
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     accept: {
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+      'image/png': ['.png'],
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/gif': ['.gif'],
+      'image/webp': ['.webp'],
     },
     disabled: (disabled ?? false) || isProcessing,
     multiple: true,
@@ -139,7 +157,7 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
                   Drag & drop images here, or click to browse
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500">
-                  PNG, JPG, JPEG, GIF, WebP • Max {MAX_FILES} files • Max 10MB each
+                  PNG, JPG, JPEG, GIF, WebP • Max {MAX_FILES} files • Max 50MB each
                 </p>
               </div>
             )}
