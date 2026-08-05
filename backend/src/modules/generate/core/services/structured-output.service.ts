@@ -63,6 +63,76 @@ Rules:
 - Prefer concrete, executable QA steps
 `;
 
+export function exactCountInstruction(count: number): string {
+  const padded = String(count).padStart(3, '0');
+  return [
+    `## Exact test case count (mandatory)`,
+    `You MUST return EXACTLY ${count} objects in the "testCases" array — no more, no fewer.`,
+    `Use sequential IDs TC-001 through TC-${padded}.`,
+    `If sources are thin, still produce ${count} distinct, useful cases (vary positive/negative/edge/UI paths).`,
+    `Keep each case compact: 2–4 steps, short expected results, short arrays — the full JSON must fit in one response.`,
+  ].join('\n');
+}
+
+export function retryExactCountInstruction(count: number, previousCount: number): string {
+  return [
+    `## Correction required`,
+    `Your previous response had ${previousCount} test cases but EXACTLY ${count} are required.`,
+    `Return a complete JSON object again with EXACTLY ${count} test cases (TC-001 … TC-${String(count).padStart(3, '0')}).`,
+    `Keep fields compact so the JSON is complete and valid.`,
+  ].join('\n');
+}
+
+export function retryInvalidJsonInstruction(count: number): string {
+  return [
+    `## Correction required`,
+    `Your previous reply was not valid complete JSON (likely truncated).`,
+    `Return ONE complete valid JSON object with EXACTLY ${count} compact test cases.`,
+    `Prefer shorter steps/expected arrays so the response finishes within token limits.`,
+  ].join('\n');
+}
+
+function extractJsonObject(raw: string): string {
+  let text = raw.trim();
+  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence?.[1]) text = fence[1].trim();
+
+  if (text.startsWith('{') && text.endsWith('}')) return text;
+
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    return text.slice(start, end + 1);
+  }
+  return text;
+}
+
+function asStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((v) => String(v ?? '')).filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+}
+
+function normalizeTestCase(raw: Record<string, unknown>, index: number): StructuredTestCase {
+  const n = String(index + 1).padStart(3, '0');
+  return {
+    id: String(raw.id || `TC-${n}`),
+    title: String(raw.title || `Test case ${index + 1}`),
+    description: String(raw.description || ''),
+    preconditions: asStringArray(raw.preconditions),
+    steps: asStringArray(raw.steps),
+    expected: asStringArray(raw.expected),
+    priority: String(raw.priority || 'Medium'),
+    regression: String(raw.regression || 'NO'),
+    testData: asStringArray(raw.testData),
+    postconditions: asStringArray(raw.postconditions),
+    coversRequirements: asStringArray(raw.coversRequirements),
+    sources: asStringArray(raw.sources),
+  };
+}
+
 export function testCasesToMarkdown(cases: StructuredTestCase[]): string {
   return cases
     .map((tc, i) => {
@@ -105,21 +175,33 @@ export function parseGenerateJson(raw: string): {
   testCases: StructuredTestCase[];
   coverageLinks: Array<{ requirementId: string; coveredBy: string[] }>;
 } {
-  let text = raw.trim();
-  const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence?.[1]) text = fence[1].trim();
+  const text = extractJsonObject(raw);
 
-  const parsed = JSON.parse(text) as {
-    testCases?: StructuredTestCase[];
-    coverage?: Array<{ requirementId: string; coveredBy?: string[] }>;
+  let parsed: {
+    testCases?: unknown;
+    coverage?: Array<{ requirementId?: string; coveredBy?: unknown }>;
   };
+  try {
+    parsed = JSON.parse(text) as typeof parsed;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'JSON parse failed';
+    throw new Error(
+      `${message} (chars=${raw.length}, head=${JSON.stringify(raw.slice(0, 120))}, tail=${JSON.stringify(raw.slice(-120))})`
+    );
+  }
 
-  const testCases = Array.isArray(parsed.testCases) ? parsed.testCases : [];
+  const rawCases = Array.isArray(parsed.testCases) ? parsed.testCases : [];
+  const testCases = rawCases
+    .filter((c): c is Record<string, unknown> => Boolean(c) && typeof c === 'object')
+    .map((c, i) => normalizeTestCase(c, i));
+
   const coverageLinks = Array.isArray(parsed.coverage)
-    ? parsed.coverage.map((c) => ({
-        requirementId: c.requirementId,
-        coveredBy: Array.isArray(c.coveredBy) ? c.coveredBy : [],
-      }))
+    ? parsed.coverage
+        .filter((c) => c && typeof c.requirementId === 'string')
+        .map((c) => ({
+          requirementId: String(c.requirementId),
+          coveredBy: asStringArray(c.coveredBy),
+        }))
     : [];
 
   return { testCases, coverageLinks };

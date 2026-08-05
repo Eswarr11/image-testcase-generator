@@ -7,11 +7,17 @@ import { extractRequirements } from '../services/requirements.service';
 import {
   GenerateResponse,
   STRUCTURED_OUTPUT_INSTRUCTIONS,
+  exactCountInstruction,
   parseGenerateJson,
+  retryExactCountInstruction,
+  retryInvalidJsonInstruction,
   testCasesToMarkdown,
 } from '../services/structured-output.service';
 import { AppError } from '../../../../exceptions/AppError';
-import { createStructuredCompletion } from '../services/openai.service';
+import {
+  createStructuredCompletion,
+  tokensForExpectedCount,
+} from '../services/openai.service';
 import { assembleGeneratedTestCases } from '../services/generate.service';
 import type { GenerateRequestDto } from '../../dto/generate.dto';
 import { logger } from '../../../../logger/logger';
@@ -21,8 +27,17 @@ type ContentPart =
   | { type: 'text'; text: string }
   | { type: 'image_url'; image_url: { url: string; detail: 'high' } };
 
-const MAX_OPENAI_IMAGES = 12;
+const MAX_OPENAI_IMAGES = 20;
+const MIN_EXPECTED_COUNT = 1;
+const MAX_EXPECTED_COUNT = 40;
+const DEFAULT_EXPECTED_COUNT = 10;
 const router = Router();
+
+function clampExpectedCount(raw: unknown): number {
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  if (!Number.isFinite(n)) return DEFAULT_EXPECTED_COUNT;
+  return Math.min(MAX_EXPECTED_COUNT, Math.max(MIN_EXPECTED_COUNT, Math.round(n)));
+}
 
 function readCookieSessionId(req: Request): string | undefined {
   const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
@@ -41,6 +56,7 @@ router.post(
         { event: 'generate_reject', fields: { reason: 'missing_openai' } }
       );
     }
+    const openaiKey = session.openai.trim();
 
     const body = (req.body || {}) as GenerateRequestDto;
 
@@ -49,6 +65,7 @@ router.post(
     const figmaUrls = (body.figmaUrls || []).map((u) => String(u).trim()).filter(Boolean);
     const clientImages = (body.images || []).filter((u) => typeof u === 'string' && u.startsWith('data:'));
     const frameSelections = body.figmaFrameSelections || {};
+    const expectedCount = clampExpectedCount(body.expectedCount);
     const uncoveredIds = new Set(
       (body.uncoveredRequirementIds || []).map((id) => String(id)).filter(Boolean)
     );
@@ -90,6 +107,7 @@ router.post(
       figmaCount: figmaUrls.length,
       clientImageCount: clientImages.length,
       hasPrompt: Boolean(prompt),
+      expectedCount,
       uncoveredCount: uncoveredIds.size,
     });
 
@@ -140,6 +158,8 @@ router.post(
         );
       }
 
+      textSections.push(exactCountInstruction(expectedCount));
+
       if (session.figma?.accessToken) {
         for (let i = 0; i < figmaUrls.length; i++) {
           const url = figmaUrls[i];
@@ -175,9 +195,13 @@ router.post(
         contentArray.push({ type: 'image_url', image_url: { url, detail: 'high' } });
       }
 
-      const system = `${SYSTEM_PROMPT}\n\n${STRUCTURED_OUTPUT_INSTRUCTIONS}`;
+      const system = `${SYSTEM_PROMPT}\n\n${STRUCTURED_OUTPUT_INSTRUCTIONS}\n\n- You MUST return EXACTLY ${expectedCount} test cases in "testCases"\n- Keep JSON compact so the response is complete (not truncated)`;
+      const maxTokens = tokensForExpectedCount(expectedCount);
 
-      const raw = await createStructuredCompletion(session.openai, system, contentArray);
+      const runCompletion = async (parts: ContentPart[]) =>
+        createStructuredCompletion(openaiKey, system, parts, { maxTokens });
+
+      let raw = await runCompletion(contentArray);
 
       let testCases;
       let coverageLinks;
@@ -185,14 +209,40 @@ router.post(
         const parsed = parseGenerateJson(raw);
         testCases = parsed.testCases;
         coverageLinks = parsed.coverageLinks;
-        logger.info('generate_parse_success', { testCaseCount: testCases.length });
-      } catch {
-        throw new AppError(
-          502,
-          'Bad Gateway',
-          'Model did not return valid structured JSON. Please try again.',
-          { event: 'generate_parse_fail' }
-        );
+        logger.info('generate_parse_success', { testCaseCount: testCases.length, expectedCount });
+      } catch (parseErr) {
+        logger.warn('generate_parse_fail_retry', {
+          expectedCount,
+          error: (parseErr as Error).message,
+          responseChars: raw.length,
+        });
+        const retryParts: ContentPart[] = [
+          ...contentArray,
+          { type: 'text', text: retryInvalidJsonInstruction(expectedCount) },
+        ];
+        raw = await runCompletion(retryParts);
+        try {
+          const parsed = parseGenerateJson(raw);
+          testCases = parsed.testCases;
+          coverageLinks = parsed.coverageLinks;
+          logger.info('generate_parse_success', {
+            testCaseCount: testCases.length,
+            expectedCount,
+            recovered: true,
+          });
+        } catch (retryErr) {
+          logger.error('generate_parse_fail', {
+            expectedCount,
+            error: (retryErr as Error).message,
+            responseChars: raw.length,
+          });
+          throw new AppError(
+            502,
+            'Bad Gateway',
+            'Model did not return valid structured JSON. Try fewer test cases or simpler inputs.',
+            { event: 'generate_parse_fail' }
+          );
+        }
       }
 
       if (!testCases.length) {
@@ -202,8 +252,51 @@ router.post(
         });
       }
 
+      if (testCases.length > expectedCount) {
+        const previous = testCases.length;
+        testCases = testCases.slice(0, expectedCount);
+        logger.info('generate_count_truncated', { expectedCount, previous });
+      } else if (testCases.length < expectedCount) {
+        const previousCount = testCases.length;
+        logger.info('generate_count_retry', { expectedCount, previousCount });
+        const retryParts: ContentPart[] = [
+          ...contentArray,
+          {
+            type: 'text',
+            text: retryExactCountInstruction(expectedCount, previousCount),
+          },
+        ];
+        raw = await runCompletion(retryParts);
+        try {
+          const parsed = parseGenerateJson(raw);
+          testCases = parsed.testCases;
+          coverageLinks = parsed.coverageLinks;
+        } catch {
+          throw new AppError(
+            502,
+            'Bad Gateway',
+            'Model did not return valid structured JSON on retry. Please try again.',
+            { event: 'generate_parse_fail', fields: { reason: 'retry_parse_fail' } }
+          );
+        }
+
+        if (testCases.length > expectedCount) {
+          testCases = testCases.slice(0, expectedCount);
+        } else if (testCases.length < expectedCount) {
+          throw new AppError(
+            502,
+            'Bad Gateway',
+            `Model returned ${testCases.length} test cases but ${expectedCount} were required. Please try again.`,
+            {
+              event: 'generate_parse_fail',
+              fields: { reason: 'count_mismatch', expectedCount, got: testCases.length },
+            }
+          );
+        }
+      }
+
       const markdown = testCasesToMarkdown(testCases);
-      logger.info('generate_success', { testCaseCount: testCases.length });
+      logger.info('generate_success', { testCaseCount: testCases.length, expectedCount });
       return res.json(assembleGeneratedTestCases(
         testCases,
         markdown,

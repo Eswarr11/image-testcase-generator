@@ -13,6 +13,12 @@ export interface SessionStatus {
 }
 
 async function parseError(res: Response): Promise<string> {
+  if (res.status === 413) {
+    return (
+      'Upload too large for hosting limits (max ~4.5MB request). ' +
+      'Try fewer images, or wait while we optimize — if this persists, use smaller screenshots.'
+    )
+  }
   try {
     const data = await res.json() as { message?: string; error?: string }
     return data.message || data.error || `Request failed (${res.status})`
@@ -85,6 +91,7 @@ export async function generateTestCase(payload: {
   confluenceUrls: string[]
   figmaUrls: string[]
   images?: string[]
+  expectedCount?: number
   figmaFrameSelections?: Record<string, string[]>
   uncoveredRequirementIds?: string[]
   existingRequirements?: Array<{ id: string; text: string }>

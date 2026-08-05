@@ -12,12 +12,16 @@ import {
   fetchFigmaDesign,
   generateTestCase as generateViaApi,
 } from '@/commons/services/sourcesApi'
+import { compressImagesForGenerate } from '@/commons/utils/compressImage'
 import CoveragePanel from '@/features/results/CoveragePanel'
+import ExpectedCountInput from './ExpectedCountInput'
 import GenerateButton from './GenerateButton'
 import ImageUpload from './ImageUpload'
 import PromptInput from './PromptInput'
 import SourceInputs from '@/features/sources/SourceInputs'
 import TestCaseResult from '@/features/results/TestCaseResult'
+
+const DEFAULT_EXPECTED_COUNT = 10
 
 export default function TestCaseGenerator() {
   const {
@@ -28,6 +32,7 @@ export default function TestCaseGenerator() {
   const { showToast } = useToast()
 
   const [prompt, setPrompt] = useState('')
+  const [expectedCount, setExpectedCount] = useState(DEFAULT_EXPECTED_COUNT)
   const [confluenceUrls, setConfluenceUrls] = useState<string[]>([''])
   const [figmaUrls, setFigmaUrls] = useState<string[]>([''])
   const [figmaFrameSelections, setFigmaFrameSelections] = useState<Record<string, string[]>>({})
@@ -39,20 +44,6 @@ export default function TestCaseGenerator() {
   const [markdown, setMarkdown] = useState<string | null>(null)
   const [coverage, setCoverage] = useState<CoverageItem[]>([])
   const [requirements, setRequirements] = useState<Array<{ id: string; text: string }>>([])
-
-  const resetFiles = useCallback(() => {
-    setUploadedFiles([])
-    showToast('All images cleared.', 'info')
-  }, [showToast])
-
-  const fileToBase64 = useCallback((file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  }, [])
 
   const filledConfluence = useMemo(
     () => confluenceUrls.map((u) => u.trim()).filter(Boolean),
@@ -124,10 +115,11 @@ export default function TestCaseGenerator() {
       else setIsGenerating(true)
 
       try {
-        const images =
-          uploadedFiles.length > 0
-            ? await Promise.all(uploadedFiles.map((f) => fileToBase64(f.file)))
-            : []
+        let images: string[] = []
+        if (uploadedFiles.length > 0) {
+          showToast('Optimizing images for upload…', 'info', 2000)
+          images = await compressImagesForGenerate(uploadedFiles.map((f) => f.file))
+        }
 
         const uncoveredIds = uncoveredOnly
           ? coverage.filter((c) => c.status === 'uncovered').map((c) => c.requirementId)
@@ -148,6 +140,7 @@ export default function TestCaseGenerator() {
           ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
           confluenceUrls: confluenceList,
           figmaUrls: figmaList,
+          expectedCount,
           ...(images.length > 0 ? { images } : {}),
           ...(Object.keys(figmaFrameSelections).length > 0
             ? { figmaFrameSelections }
@@ -188,7 +181,7 @@ export default function TestCaseGenerator() {
         showToast(
           uncoveredOnly
             ? `Added ${data.testCases.length} case(s) for uncovered requirements`
-            : 'Test cases generated successfully!',
+            : `Generated ${data.testCases.length} test case(s)`,
           'success'
         )
       } catch (error) {
@@ -201,6 +194,7 @@ export default function TestCaseGenerator() {
     },
     [
       prompt,
+      expectedCount,
       confluenceUrls,
       figmaUrls,
       figmaFrameSelections,
@@ -211,7 +205,6 @@ export default function TestCaseGenerator() {
       coverage,
       requirements,
       showToast,
-      fileToBase64,
     ]
   )
 
@@ -247,25 +240,17 @@ export default function TestCaseGenerator() {
             disabled={isGenerating || isGeneratingMissing}
           />
 
+          <ExpectedCountInput
+            value={expectedCount}
+            onChange={setExpectedCount}
+            disabled={isGenerating || isGeneratingMissing}
+          />
+
           <ImageUpload
             uploadedFiles={uploadedFiles}
             onFilesChange={setUploadedFiles}
             disabled={isGenerating || isGeneratingMissing}
           />
-
-          {uploadedFiles.some((f) => f.preview.startsWith('blob:')) && (
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded border border-yellow-300 dark:border-yellow-700">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200 mb-2">
-                Old blob URLs detected. Clear and re-upload images.
-              </p>
-              <button
-                onClick={resetFiles}
-                className="text-sm px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded"
-              >
-                Clear All Images
-              </button>
-            </div>
-          )}
 
           <GenerateButton
             onClick={() => runGenerate()}

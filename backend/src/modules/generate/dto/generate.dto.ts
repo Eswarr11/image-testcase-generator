@@ -5,6 +5,7 @@ export interface GenerateRequestDto {
   confluenceUrls?: string[];
   figmaUrls?: string[];
   images?: string[];
+  expectedCount?: number;
   figmaFrameSelections?: Record<string, string[]>;
   uncoveredRequirementIds?: string[];
   existingRequirements?: RequirementItem[];

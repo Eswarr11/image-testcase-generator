@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone, type FileRejection } from 'react-dropzone'
 import { Upload, X, Image as ImageIcon, Loader2 } from 'lucide-react'
 import { UploadedFile } from '@/commons/types'
@@ -10,34 +10,35 @@ interface ImageUploadProps {
   disabled?: boolean
 }
 
-const MAX_FILES = 9
+const MAX_FILES = 20
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
+
+function revokePreview(preview: string) {
+  if (preview.startsWith('blob:')) {
+    URL.revokeObjectURL(preview)
+  }
+}
 
 export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: ImageUploadProps) {
   const { showToast } = useToast()
   const [isProcessing, setIsProcessing] = useState(false)
+  const filesRef = useRef(uploadedFiles)
+  filesRef.current = uploadedFiles
 
-  const createImagePreview = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          resolve(e.target.result as string)
-        } else {
-          reject(new Error('Failed to read file'))
-        }
+  useEffect(() => {
+    return () => {
+      for (const f of filesRef.current) {
+        revokePreview(f.preview)
       }
-      reader.onerror = () => reject(new Error('Failed to read file'))
-      reader.readAsDataURL(file)
-    })
-  }
+    }
+  }, [])
 
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+  const onDrop = useCallback((acceptedFiles: File[]) => {
     if (isProcessing) return
-    
+
     setIsProcessing(true)
     const newFiles: UploadedFile[] = []
-    
+
     try {
       for (const file of acceptedFiles) {
         if (uploadedFiles.length + newFiles.length >= MAX_FILES) {
@@ -50,15 +51,10 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
           continue
         }
 
-        try {
-          const id = Math.random().toString(36).substring(2, 9)
-          const preview = await createImagePreview(file)
-          
-          newFiles.push({ file, preview, id })
-        } catch (error) {
-          console.error('Error creating preview for file:', file.name, error)
-          showToast(`Failed to create preview for ${file.name}`, 'error')
-        }
+        const id = Math.random().toString(36).substring(2, 9)
+        // Lightweight preview — avoid base64-encoding large files on the main thread
+        const preview = URL.createObjectURL(file)
+        newFiles.push({ file, preview, id })
       }
 
       if (newFiles.length > 0) {
@@ -98,10 +94,15 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
   })
 
   const removeFile = (id: string) => {
-    onFilesChange(uploadedFiles.filter(f => f.id !== id))
+    const target = uploadedFiles.find((f) => f.id === id)
+    if (target) revokePreview(target.preview)
+    onFilesChange(uploadedFiles.filter((f) => f.id !== id))
   }
 
   const clearAllFiles = () => {
+    for (const f of uploadedFiles) {
+      revokePreview(f.preview)
+    }
     onFilesChange([])
     showToast('All images cleared', 'info')
   }
@@ -113,7 +114,7 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
           <ImageIcon className="w-4 h-4 text-primary-600" />
           <span>Images (Optional)</span>
         </label>
-        
+
         <div className="flex items-center space-x-2 text-xs text-gray-600 dark:text-gray-400">
           <span>{uploadedFiles.length}/{MAX_FILES} images</span>
           {uploadedFiles.length > 0 && (
@@ -131,15 +132,15 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
         {...getRootProps()}
         className={`
           border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200
-          ${isDragActive 
-            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' 
+          ${isDragActive
+            ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
             : 'border-gray-300 dark:border-gray-600 hover:border-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800'
           }
           ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
         <input {...getInputProps()} />
-        
+
         {isProcessing ? (
           <>
             <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary-600 animate-spin" />
@@ -148,7 +149,7 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
         ) : (
           <>
             <Upload className={`w-12 h-12 mx-auto mb-4 ${isDragActive ? 'text-primary-600' : 'text-gray-400'}`} />
-            
+
             {isDragActive ? (
               <p className="text-primary-600 font-medium">Drop the images here...</p>
             ) : (
@@ -157,7 +158,7 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
                   Drag & drop images here, or click to browse
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-500">
-                  PNG, JPG, JPEG, GIF, WebP • Max {MAX_FILES} files • Max 50MB each
+                  PNG, JPG, JPEG, GIF, WebP • Max {MAX_FILES} files • Max 50MB each (optimized before send)
                 </p>
               </div>
             )}
@@ -175,7 +176,6 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
                   alt={file.file.name}
                   className="w-full h-full object-cover"
                   onError={(e) => {
-                    // Fallback if image fails to load
                     const target = e.target as HTMLImageElement
                     target.style.display = 'none'
                     const parent = target.parentElement
@@ -189,7 +189,7 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
                   loading="lazy"
                 />
               </div>
-              
+
               <button
                 onClick={() => removeFile(file.id)}
                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-colors duration-200"
@@ -197,7 +197,7 @@ export default function ImageUpload({ uploadedFiles, onFilesChange, disabled }: 
               >
                 <X className="w-3 h-3" />
               </button>
-              
+
               <p className="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate" title={file.file.name}>
                 {file.file.name}
               </p>
