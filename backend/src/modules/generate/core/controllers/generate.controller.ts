@@ -8,16 +8,11 @@ import {
   GenerateResponse,
   STRUCTURED_OUTPUT_INSTRUCTIONS,
   exactCountInstruction,
-  parseGenerateJson,
-  retryExactCountInstruction,
-  retryInvalidJsonInstruction,
   testCasesToMarkdown,
 } from '../services/structured-output.service';
 import { AppError } from '../../../../exceptions/AppError';
-import {
-  createStructuredCompletion,
-  tokensForExpectedCount,
-} from '../services/openai.service';
+import { tokensForExpectedCount } from '../services/openai.service';
+import { generateGraph } from '../graph/generate.graph';
 import { assembleGeneratedTestCases } from '../services/generate.service';
 import type { GenerateRequestDto } from '../../dto/generate.dto';
 import { logger } from '../../../../logger/logger';
@@ -198,110 +193,37 @@ router.post(
       const system = `${SYSTEM_PROMPT}\n\n${STRUCTURED_OUTPUT_INSTRUCTIONS}\n\n- You MUST return EXACTLY ${expectedCount} test cases in "testCases"\n- Keep JSON compact so the response is complete (not truncated)`;
       const maxTokens = tokensForExpectedCount(expectedCount);
 
-      const runCompletion = async (parts: ContentPart[]) =>
-        createStructuredCompletion(openaiKey, system, parts, { maxTokens });
+      const result = await generateGraph.invoke({
+        openaiKey,
+        systemPrompt: system,
+        contentParts: contentArray,
+        expectedCount,
+        maxTokens,
+      });
 
-      let raw = await runCompletion(contentArray);
-
-      let testCases;
-      let coverageLinks;
-      try {
-        const parsed = parseGenerateJson(raw);
-        testCases = parsed.testCases;
-        coverageLinks = parsed.coverageLinks;
-        logger.info('generate_parse_success', { testCaseCount: testCases.length, expectedCount });
-      } catch (parseErr) {
-        logger.warn('generate_parse_fail_retry', {
-          expectedCount,
-          error: (parseErr as Error).message,
-          responseChars: raw.length,
-        });
-        const retryParts: ContentPart[] = [
-          ...contentArray,
-          { type: 'text', text: retryInvalidJsonInstruction(expectedCount) },
-        ];
-        raw = await runCompletion(retryParts);
-        try {
-          const parsed = parseGenerateJson(raw);
-          testCases = parsed.testCases;
-          coverageLinks = parsed.coverageLinks;
-          logger.info('generate_parse_success', {
-            testCaseCount: testCases.length,
-            expectedCount,
-            recovered: true,
-          });
-        } catch (retryErr) {
-          logger.error('generate_parse_fail', {
-            expectedCount,
-            error: (retryErr as Error).message,
-            responseChars: raw.length,
-          });
-          throw new AppError(
-            502,
-            'Bad Gateway',
-            'Model did not return valid structured JSON. Try fewer test cases or simpler inputs.',
-            { event: 'generate_parse_fail' }
-          );
-        }
+      if (result.error) {
+        throw new AppError(
+          result.errorStatus || 502,
+          result.errorStatus === 504 ? 'Timeout' : 'Bad Gateway',
+          result.error,
+          { event: 'generate_fail' }
+        );
       }
 
-      if (!testCases.length) {
+      if (!result.testCases.length) {
         throw new AppError(502, 'Bad Gateway', 'No test cases in model response', {
           event: 'generate_parse_fail',
           fields: { reason: 'empty_test_cases' },
         });
       }
 
-      if (testCases.length > expectedCount) {
-        const previous = testCases.length;
-        testCases = testCases.slice(0, expectedCount);
-        logger.info('generate_count_truncated', { expectedCount, previous });
-      } else if (testCases.length < expectedCount) {
-        const previousCount = testCases.length;
-        logger.info('generate_count_retry', { expectedCount, previousCount });
-        const retryParts: ContentPart[] = [
-          ...contentArray,
-          {
-            type: 'text',
-            text: retryExactCountInstruction(expectedCount, previousCount),
-          },
-        ];
-        raw = await runCompletion(retryParts);
-        try {
-          const parsed = parseGenerateJson(raw);
-          testCases = parsed.testCases;
-          coverageLinks = parsed.coverageLinks;
-        } catch {
-          throw new AppError(
-            502,
-            'Bad Gateway',
-            'Model did not return valid structured JSON on retry. Please try again.',
-            { event: 'generate_parse_fail', fields: { reason: 'retry_parse_fail' } }
-          );
-        }
-
-        if (testCases.length > expectedCount) {
-          testCases = testCases.slice(0, expectedCount);
-        } else if (testCases.length < expectedCount) {
-          throw new AppError(
-            502,
-            'Bad Gateway',
-            `Model returned ${testCases.length} test cases but ${expectedCount} were required. Please try again.`,
-            {
-              event: 'generate_parse_fail',
-              fields: { reason: 'count_mismatch', expectedCount, got: testCases.length },
-            }
-          );
-        }
-      }
-
-      const markdown = testCasesToMarkdown(testCases);
-      logger.info('generate_success', { testCaseCount: testCases.length, expectedCount });
+      const markdown = testCasesToMarkdown(result.testCases);
+      logger.info('generate_success', { testCaseCount: result.testCases.length, expectedCount });
       return res.json(assembleGeneratedTestCases(
-        testCases,
+        result.testCases,
         markdown,
         requirements,
-        coverageLinks
+        result.coverageLinks,
       ));
     } catch (err) {
       if (err instanceof AppError) throw err;

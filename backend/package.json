@@ -18,6 +18,8 @@
     "node": "22.x"
   },
   "dependencies": {
+    "@langchain/langgraph": "^1.4.9",
+    "@langchain/openai": "^1.5.6",
     "@libsql/client": "^0.17.4",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.7",
