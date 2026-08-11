@@ -10,7 +10,7 @@ import type {
 import {
   fetchConfluencePage,
   fetchFigmaDesign,
-  generateTestCase as generateViaApi,
+  generateTestCaseStream,
 } from '@/commons/services/sourcesApi'
 import { compressImagesForGenerate } from '@/commons/utils/compressImage'
 import CoveragePanel from '@/features/results/CoveragePanel'
@@ -39,6 +39,8 @@ export default function TestCaseGenerator() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingMissing, setIsGeneratingMissing] = useState(false)
+  const [generationStep, setGenerationStep] = useState('')
+  const [streamingPreview, setStreamingPreview] = useState('')
 
   const [testCases, setTestCases] = useState<StructuredTestCase[] | null>(null)
   const [markdown, setMarkdown] = useState<string | null>(null)
@@ -130,66 +132,77 @@ export default function TestCaseGenerator() {
           return
         }
 
-        showToast(
-          uncoveredOnly ? 'Generating cases for uncovered requirements…' : 'Generating structured test cases…',
-          'info',
-          2500
-        )
+        let streamError: Error | null = null
 
-        const data = await generateViaApi({
-          ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
-          confluenceUrls: confluenceList,
-          figmaUrls: figmaList,
-          expectedCount,
-          ...(images.length > 0 ? { images } : {}),
-          ...(Object.keys(figmaFrameSelections).length > 0
-            ? { figmaFrameSelections }
-            : {}),
-          ...(uncoveredIds ? { uncoveredRequirementIds: uncoveredIds } : {}),
-          ...(uncoveredOnly && requirements.length > 0
-            ? { existingRequirements: requirements }
-            : {}),
-        })
-
-        if (uncoveredOnly) {
-          setTestCases((prev) => [...(prev || []), ...data.testCases])
-          setMarkdown((prev) => `${prev || ''}\n\n${data.markdown}`)
-          setCoverage((prev) => {
-            const byId = new Map(prev.map((item) => [item.requirementId, item]))
-            for (const item of data.coverage) {
-              const existing = byId.get(item.requirementId)
-              if (!existing) {
-                byId.set(item.requirementId, item)
-              } else {
-                const coveredBy = [...new Set([...existing.coveredBy, ...item.coveredBy])]
-                byId.set(item.requirementId, {
-                  ...item,
-                  coveredBy,
-                  status: coveredBy.length > 0 ? 'covered' : 'uncovered',
+        await generateTestCaseStream(
+          {
+            ...(prompt.trim() ? { prompt: prompt.trim() } : {}),
+            confluenceUrls: confluenceList,
+            figmaUrls: figmaList,
+            expectedCount,
+            ...(images.length > 0 ? { images } : {}),
+            ...(Object.keys(figmaFrameSelections).length > 0
+              ? { figmaFrameSelections }
+              : {}),
+            ...(uncoveredIds ? { uncoveredRequirementIds: uncoveredIds } : {}),
+            ...(uncoveredOnly && requirements.length > 0
+              ? { existingRequirements: requirements }
+              : {}),
+          },
+          {
+            onProgress: (_, label) => setGenerationStep(label),
+            onToken: (text) => setStreamingPreview((prev) => prev + text),
+            onDone: (data) => {
+              setStreamingPreview('')
+              setGenerationStep('')
+              if (uncoveredOnly) {
+                setTestCases((prev) => [...(prev || []), ...data.testCases])
+                setMarkdown((prev) => `${prev || ''}\n\n${data.markdown}`)
+                setCoverage((prev) => {
+                  const byId = new Map(prev.map((item) => [item.requirementId, item]))
+                  for (const item of data.coverage) {
+                    const existing = byId.get(item.requirementId)
+                    if (!existing) {
+                      byId.set(item.requirementId, item)
+                    } else {
+                      const coveredBy = [...new Set([...existing.coveredBy, ...item.coveredBy])]
+                      byId.set(item.requirementId, {
+                        ...item,
+                        coveredBy,
+                        status: coveredBy.length > 0 ? 'covered' : 'uncovered',
+                      })
+                    }
+                  }
+                  return [...byId.values()]
                 })
+              } else {
+                setTestCases(data.testCases)
+                setMarkdown(data.markdown)
+                setCoverage(data.coverage)
+                setRequirements(data.requirements)
               }
-            }
-            return [...byId.values()]
-          })
-        } else {
-          setTestCases(data.testCases)
-          setMarkdown(data.markdown)
-          setCoverage(data.coverage)
-          setRequirements(data.requirements)
-        }
-
-        showToast(
-          uncoveredOnly
-            ? `Added ${data.testCases.length} case(s) for uncovered requirements`
-            : `Generated ${data.testCases.length} test case(s)`,
-          'success'
+              showToast(
+                uncoveredOnly
+                  ? `Added ${data.testCases.length} case(s) for uncovered requirements`
+                  : `Generated ${data.testCases.length} test case(s)`,
+                'success'
+              )
+            },
+            onError: (_, message) => {
+              streamError = new Error(message)
+            },
+          }
         )
+
+        if (streamError) throw streamError
       } catch (error) {
         console.error('Error generating test case:', error)
         showToast(`Error generating test case: ${(error as Error).message}`, 'error', 8000)
       } finally {
         setIsGenerating(false)
         setIsGeneratingMissing(false)
+        setGenerationStep('')
+        setStreamingPreview('')
       }
     },
     [
@@ -257,6 +270,23 @@ export default function TestCaseGenerator() {
             disabled={!canGenerate}
             isGenerating={isGenerating}
           />
+
+          {generationStep && (
+            <p className="text-sm text-blue-600 dark:text-blue-400 animate-pulse">
+              {generationStep}
+            </p>
+          )}
+
+          {streamingPreview && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 overflow-hidden">
+              <p className="px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                Streaming response…
+              </p>
+              <pre className="p-3 text-xs text-gray-700 dark:text-gray-300 overflow-auto max-h-48 whitespace-pre-wrap break-all">
+                {streamingPreview}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
 

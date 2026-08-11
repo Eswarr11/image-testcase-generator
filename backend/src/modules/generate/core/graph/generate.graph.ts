@@ -61,6 +61,7 @@ async function callLLMNode(state: State): Promise<Partial<State>> {
       maxTokens: state.maxTokens,
       apiKey: state.openaiKey,
       timeout: 180_000,
+      streaming: true,
       modelKwargs: { response_format: { type: 'json_object' } },
     });
 

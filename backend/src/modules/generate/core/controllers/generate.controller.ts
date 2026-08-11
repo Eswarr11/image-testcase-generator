@@ -28,6 +28,13 @@ const MAX_EXPECTED_COUNT = 40;
 const DEFAULT_EXPECTED_COUNT = 10;
 const router = Router();
 
+const STEP_LABELS: Record<string, string> = {
+  prepareContent: 'Preparing content…',
+  callLLM: 'Calling AI model…',
+  parseResponse: 'Parsing response…',
+  validateCount: 'Validating test cases…',
+};
+
 function clampExpectedCount(raw: unknown): number {
   const n = typeof raw === 'number' ? raw : Number(raw);
   if (!Number.isFinite(n)) return DEFAULT_EXPECTED_COUNT;
@@ -39,9 +46,16 @@ function readCookieSessionId(req: Request): string | undefined {
   return cookies?.[SESSION_COOKIE];
 }
 
+function writeSSE(res: Response, event: string, data: unknown): void {
+  try {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  } catch { /* client disconnected */ }
+}
+
 router.post(
   '/',
   asyncHandler(async (req: Request, res: Response<GenerateResponse>) => {
+    // Phase 1: Validation — errors here are normal JSON responses via asyncHandler
     const session = await getSession(readCookieSessionId(req));
     if (!session?.openai?.trim()) {
       throw new AppError(
@@ -105,6 +119,12 @@ router.post(
       expectedCount,
       uncoveredCount: uncoveredIds.size,
     });
+
+    // Phase 2: SSE streaming — all errors from here go through writeSSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
 
     try {
       const textSections: string[] = [];
@@ -193,54 +213,74 @@ router.post(
       const system = `${SYSTEM_PROMPT}\n\n${STRUCTURED_OUTPUT_INSTRUCTIONS}\n\n- You MUST return EXACTLY ${expectedCount} test cases in "testCases"\n- Keep JSON compact so the response is complete (not truncated)`;
       const maxTokens = tokensForExpectedCount(expectedCount);
 
-      const result = await generateGraph.invoke({
-        openaiKey,
-        systemPrompt: system,
-        contentParts: contentArray,
-        expectedCount,
-        maxTokens,
-      });
+      const run = await generateGraph.streamEvents(
+        { openaiKey, systemPrompt: system, contentParts: contentArray, expectedCount, maxTokens },
+        { version: 'v3', streamMode: ['tasks', 'messages'] }
+      );
+
+      let callLLMCount = 0;
+
+      for await (const event of run) {
+        const params = event.params as Record<string, unknown> | undefined;
+        const data = params?.['data'] as Record<string, unknown> | undefined;
+        const method = event.method as string;
+
+        // Node started: tasks event with name but no result yet
+        if (method === 'tasks' && data && 'name' in data && !('result' in data)) {
+          const nodeName = data['name'] as string;
+          if (nodeName in STEP_LABELS) {
+            if (nodeName === 'callLLM') callLLMCount++;
+            writeSSE(res, 'progress', {
+              step: nodeName,
+              label: nodeName === 'callLLM' && callLLMCount > 1
+                ? `Calling AI model… (attempt ${callLLMCount})`
+                : STEP_LABELS[nodeName],
+            });
+          }
+        }
+
+        // LLM token delta
+        if (method === 'messages') {
+          const msgData = data as { event?: string; delta?: { type?: string; text?: string } } | undefined;
+          if (
+            msgData?.event === 'content-block-delta' &&
+            msgData.delta?.type === 'text-delta' &&
+            typeof msgData.delta.text === 'string'
+          ) {
+            writeSSE(res, 'token', { text: msgData.delta.text });
+          }
+        }
+      }
+
+      const result = await run.output;
 
       if (result.error) {
-        throw new AppError(
-          result.errorStatus || 502,
-          result.errorStatus === 504 ? 'Timeout' : 'Bad Gateway',
-          result.error,
-          { event: 'generate_fail' }
-        );
+        writeSSE(res, 'error', { status: result.errorStatus || 502, message: result.error });
+        return res.end();
       }
 
       if (!result.testCases.length) {
-        throw new AppError(502, 'Bad Gateway', 'No test cases in model response', {
-          event: 'generate_parse_fail',
-          fields: { reason: 'empty_test_cases' },
-        });
+        writeSSE(res, 'error', { status: 502, message: 'No test cases in model response' });
+        return res.end();
       }
 
       const markdown = testCasesToMarkdown(result.testCases);
       logger.info('generate_success', { testCaseCount: result.testCases.length, expectedCount });
-      return res.json(assembleGeneratedTestCases(
+
+      writeSSE(res, 'done', assembleGeneratedTestCases(
         result.testCases,
         markdown,
         requirements,
         result.coverageLinks,
       ));
+      return res.end();
     } catch (err) {
-      if (err instanceof AppError) throw err;
-      if ((err as Error).name === 'AbortError') {
-        throw new AppError(
-          504,
-          'Timeout',
-          'Generation timed out. Try fewer links or images.',
-          { event: 'generate_fail', fields: { reason: 'timeout' } }
-        );
-      }
-      throw new AppError(
-        502,
-        'Bad Gateway',
-        (err as Error).message || 'Generation failed',
-        { event: 'generate_fail', fields: { reason: 'unexpected' } }
-      );
+      const message = err instanceof AppError
+        ? err.message
+        : (err instanceof Error ? err.message : 'Generation failed');
+      const status = err instanceof AppError ? err.status : 502;
+      writeSSE(res, 'error', { status, message });
+      return res.end();
     }
   })
 );

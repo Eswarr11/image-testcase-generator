@@ -86,7 +86,7 @@ export async function fetchFigmaDesign(
   return res.json() as Promise<SourceFetchResult>
 }
 
-export async function generateTestCase(payload: {
+export interface GeneratePayload {
   prompt?: string
   confluenceUrls: string[]
   figmaUrls: string[]
@@ -95,13 +95,72 @@ export async function generateTestCase(payload: {
   figmaFrameSelections?: Record<string, string[]>
   uncoveredRequirementIds?: string[]
   existingRequirements?: Array<{ id: string; text: string }>
-}): Promise<GenerateResponse> {
+}
+
+export interface GenerateStreamCallbacks {
+  onProgress?: (step: string, label: string) => void
+  onToken?: (text: string) => void
+  onDone?: (result: GenerateResponse) => void
+  onError?: (status: number, message: string) => void
+}
+
+export async function generateTestCaseStream(
+  payload: GeneratePayload,
+  callbacks: GenerateStreamCallbacks
+): Promise<void> {
   const res = await fetch('/api/generate-test-case', {
     method: 'POST',
     credentials: 'include',
     headers: jsonHeaders,
     body: JSON.stringify(payload),
   })
-  if (!res.ok) throw new Error(await parseError(res))
-  return res.json() as Promise<GenerateResponse>
+
+  // Non-SSE errors (validation failures before SSE headers were set)
+  if (!res.ok) {
+    callbacks.onError?.(res.status, await parseError(res))
+    return
+  }
+
+  if (!res.body) {
+    callbacks.onError?.(502, 'No response body from server')
+    return
+  }
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+
+    // SSE events are separated by double newline
+    const parts = buffer.split('\n\n')
+    buffer = parts.pop() ?? ''
+
+    for (const part of parts) {
+      const eventMatch = part.match(/^event: (\w+)\ndata: (.+)$/s)
+      if (!eventMatch) continue
+      const eventType = eventMatch[1]
+      const dataStr = eventMatch[2]
+      if (!eventType || !dataStr) continue
+      let data: Record<string, unknown>
+      try {
+        data = JSON.parse(dataStr) as Record<string, unknown>
+      } catch {
+        continue
+      }
+
+      if (eventType === 'progress') {
+        callbacks.onProgress?.(data['step'] as string, data['label'] as string)
+      } else if (eventType === 'token') {
+        callbacks.onToken?.(data['text'] as string)
+      } else if (eventType === 'done') {
+        callbacks.onDone?.(data as unknown as GenerateResponse)
+      } else if (eventType === 'error') {
+        callbacks.onError?.(data['status'] as number, data['message'] as string)
+      }
+    }
+  }
 }
