@@ -5,6 +5,10 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "ignoreDeprecations": "5.0",
+    "baseUrl": ".",
+    "paths": {
+      "@langchain/langgraph/prebuilt": ["../node_modules/@langchain/langgraph/dist/prebuilt/index"]
+    },
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,

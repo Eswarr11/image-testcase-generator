@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useCredentials } from '@/commons/context/CredentialsContext'
 import { useToast } from '@/commons/context/ToastContext'
 import type {
@@ -23,6 +23,18 @@ import TestCaseResult from '@/features/results/TestCaseResult'
 
 const DEFAULT_EXPECTED_COUNT = 10
 
+interface StepItem {
+  label: string
+  status: 'running' | 'done'
+}
+
+function lastRunningIndex(steps: StepItem[]): number {
+  for (let i = steps.length - 1; i >= 0; i--) {
+    if (steps[i]?.status === 'running') return i
+  }
+  return -1
+}
+
 export default function TestCaseGenerator() {
   const {
     isOpenAIConfigured,
@@ -39,13 +51,16 @@ export default function TestCaseGenerator() {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [isGeneratingMissing, setIsGeneratingMissing] = useState(false)
-  const [generationStep, setGenerationStep] = useState('')
+  const [steps, setSteps] = useState<StepItem[]>([])
   const [streamingPreview, setStreamingPreview] = useState('')
 
   const [testCases, setTestCases] = useState<StructuredTestCase[] | null>(null)
   const [markdown, setMarkdown] = useState<string | null>(null)
   const [coverage, setCoverage] = useState<CoverageItem[]>([])
   const [requirements, setRequirements] = useState<Array<{ id: string; text: string }>>([])
+
+  // Ref to accumulate streaming preview without triggering render per token-batch
+  const previewRef = useRef('')
 
   const filledConfluence = useMemo(
     () => confluenceUrls.map((u) => u.trim()).filter(Boolean),
@@ -87,7 +102,6 @@ export default function TestCaseGenerator() {
       }
 
       const confluenceList = confluenceUrls.map((u) => u.trim()).filter(Boolean)
-      // Only treat real Figma URLs as sources — blank/partial text must not block generate
       const figmaList = figmaUrls
         .map((u) => u.trim())
         .filter((u) => u.length > 0 && /figma\.com\//i.test(u))
@@ -115,6 +129,10 @@ export default function TestCaseGenerator() {
       const uncoveredOnly = Boolean(opts?.uncoveredOnly)
       if (uncoveredOnly) setIsGeneratingMissing(true)
       else setIsGenerating(true)
+
+      setSteps([])
+      setStreamingPreview('')
+      previewRef.current = ''
 
       try {
         let images: string[] = []
@@ -150,11 +168,42 @@ export default function TestCaseGenerator() {
               : {}),
           },
           {
-            onProgress: (_, label) => setGenerationStep(label),
-            onToken: (text) => setStreamingPreview((prev) => prev + text),
+            onToolCall: (name) => {
+              const label =
+                name === 'fetch_confluence' ? 'Fetching Confluence page…' : 'Fetching Figma design…'
+              setSteps((prev) => [...prev, { label, status: 'running' }])
+            },
+            onToolResult: (_name, summary) => {
+              setSteps((prev) => {
+                const idx = lastRunningIndex(prev)
+                if (idx < 0) return prev
+                const updated = [...prev]
+                updated[idx] = { label: summary, status: 'done' }
+                return updated
+              })
+            },
+            onGenerating: (attempt) => {
+              const label =
+                attempt > 1 ? `Calling AI model… (attempt ${attempt})` : 'Calling AI model…'
+              setSteps((prev) => [...prev, { label, status: 'running' }])
+            },
+            onTokenBatch: (text) => {
+              previewRef.current += text
+              setStreamingPreview(previewRef.current)
+            },
+            onParse: () => {
+              setSteps((prev) => {
+                const idx = lastRunningIndex(prev)
+                if (idx < 0) return prev
+                const updated = [...prev]
+                updated[idx] = { ...(updated[idx] as StepItem), status: 'done' }
+                return updated
+              })
+            },
             onDone: (data) => {
               setStreamingPreview('')
-              setGenerationStep('')
+              previewRef.current = ''
+              setSteps([])
               if (uncoveredOnly) {
                 setTestCases((prev) => [...(prev || []), ...data.testCases])
                 setMarkdown((prev) => `${prev || ''}\n\n${data.markdown}`)
@@ -201,8 +250,9 @@ export default function TestCaseGenerator() {
       } finally {
         setIsGenerating(false)
         setIsGeneratingMissing(false)
-        setGenerationStep('')
+        setSteps([])
         setStreamingPreview('')
+        previewRef.current = ''
       }
     },
     [
@@ -271,10 +321,21 @@ export default function TestCaseGenerator() {
             isGenerating={isGenerating}
           />
 
-          {generationStep && (
-            <p className="text-sm text-blue-600 dark:text-blue-400 animate-pulse">
-              {generationStep}
-            </p>
+          {steps.length > 0 && (
+            <div className="space-y-1">
+              {steps.map((step, i) => (
+                <p
+                  key={i}
+                  className={`text-sm ${
+                    step.status === 'running'
+                      ? 'text-blue-600 dark:text-blue-400 animate-pulse'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  {step.status === 'done' ? '✓ ' : ''}{step.label}
+                </p>
+              ))}
+            </div>
           )}
 
           {streamingPreview && (

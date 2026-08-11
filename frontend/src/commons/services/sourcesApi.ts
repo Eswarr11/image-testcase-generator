@@ -98,8 +98,11 @@ export interface GeneratePayload {
 }
 
 export interface GenerateStreamCallbacks {
-  onProgress?: (step: string, label: string) => void
-  onToken?: (text: string) => void
+  onToolCall?: (name: string, input: Record<string, unknown>) => void
+  onToolResult?: (name: string, summary: string) => void
+  onGenerating?: (attempt: number) => void
+  onTokenBatch?: (text: string) => void
+  onParse?: (attempt: number) => void
   onDone?: (result: GenerateResponse) => void
   onError?: (status: number, message: string) => void
 }
@@ -152,10 +155,16 @@ export async function generateTestCaseStream(
         continue
       }
 
-      if (eventType === 'progress') {
-        callbacks.onProgress?.(data['step'] as string, data['label'] as string)
-      } else if (eventType === 'token') {
-        callbacks.onToken?.(data['text'] as string)
+      if (eventType === 'tool_call') {
+        callbacks.onToolCall?.(data['name'] as string, data['input'] as Record<string, unknown>)
+      } else if (eventType === 'tool_result') {
+        callbacks.onToolResult?.(data['name'] as string, data['summary'] as string)
+      } else if (eventType === 'generating') {
+        callbacks.onGenerating?.(data['attempt'] as number)
+      } else if (eventType === 'token_batch') {
+        callbacks.onTokenBatch?.(data['text'] as string)
+      } else if (eventType === 'parse') {
+        callbacks.onParse?.(data['attempt'] as number)
       } else if (eventType === 'done') {
         callbacks.onDone?.(data as unknown as GenerateResponse)
       } else if (eventType === 'error') {
